@@ -21,7 +21,7 @@ Every technical term MUST be verified with 2+ sources. Every term MUST have an i
 A correction without verification is a guess dressed as fact. A counterparty mentioned without research is a missed context opportunity. A bullet list masquerading as narrative is a failure of communication. Phonetic transcription left as-is ("jenkinsun" instead of "Jenkins") is unsearchable and unprofessional. **A summarized or abbreviated output is a betrayal of the source material.**
 
 **The Three Absolutes (NON-NEGOTIABLE DEFAULTS):**
-1. **ZERO DETAIL LOSS** — Every fact, quote, nuance, and context from the source MUST appear in the output. If it was mentioned, it matters.
+1. **ZERO BUSINESS-RELEVANT DETAIL LOSS** — Every decision, metric, technical fact, and contextual insight from the source MUST appear in the output. Filter out pure phatic communication (greetings, small talk, filler) UNLESS it reveals relationship dynamics or power structures. "We chatted about the weather" = skip. "They mentioned their team went through similar pain for 6 months" = KEEP (reveals shared context).
 2. **MAXIMUM TOKEN UTILIZATION** — Use as many tokens as needed to capture full richness. Brevity is NOT a virtue here. Density with depth is.
 3. **HIGH-DENSITY NARRATIVE** — Every sentence must carry weight. Tight, structured storytelling—not padding, but substance.
 
@@ -34,7 +34,7 @@ A correction without verification is a guess dressed as fact. A counterparty men
 | Phase | Key Activities | Success Criteria |
 |-------|---------------|------------------|
 | **1. Temporal** | Check current time, calculate elapsed time | Temporal context established |
-| **2. Counterparty** | Research external company/team, meeting format | 3+ searches, context integrated |
+| **2. Counterparty** | External: 3+ searches per counterparty / Internal: Team roles & alignment context | Context integrated (external research OR internal alignment) |
 | **3. Context** | Extract when/where/why/who/what | Can answer all 5 questions |
 | **4. Verify** | Flag terms, cluster context, multi-source search | All terms verified with 2+ sources |
 | **5. Signal** | Extract decisions/actions/parked, map terms | All items have owner + deadline |
@@ -128,9 +128,32 @@ mcp__time__get_current_time (timezone: Asia/Seoul)
 
 ---
 
-### Phase 2: Counterparty Intelligence (MANDATORY)
+### Phase 2: Counterparty Intelligence (CONDITIONAL)
 
-**GATE: Create TodoWrite todo: "Phase 2: Research counterparty (min 3 searches)"**
+**GATE: Create TodoWrite todo: "Phase 2: Research counterparty OR establish internal context"**
+
+#### BYPASS CONDITION: Internal-Only Meetings
+
+**If ALL participants are from the same organization (e.g., all IICOMBINED employees):**
+- **SKIP** external company research (web searches)
+- **INSTEAD** establish "Internal Alignment Context":
+  1. **Team Roles**: What does each participating team own? (2-3 sentences)
+  2. **Why Cross-Team**: Why did this require multiple teams? (1-2 sentences)
+  3. **Prior History**: Any previous alignment issues or dependencies? (if known)
+  4. **Decision Authority**: Who has final say on disputed items?
+
+**Internal Meeting Context Template:**
+```
+This internal sync brought together [Team A] (responsible for [X]) and [Team B] (responsible for [Y])
+to resolve [specific dependency/handoff/alignment issue]. [Team A] owns [capability], while [Team B]
+consumes it for [use case]. Previous coordination has been [ad-hoc/regular/first-time].
+```
+
+**Proceed to Phase 3 after internal context is established.**
+
+---
+
+#### FOR EXTERNAL MEETINGS: Full Counterparty Research (MANDATORY)
 
 You cannot proceed until:
 - [ ] Identified all external companies/teams mentioned
@@ -534,14 +557,15 @@ The team uses cdk8s for deployment.
 If you catch yourself thinking:
 
 **🚨 DETAIL PRESERVATION (MOST CRITICAL):**
-- "This detail is minor, I can skip it" ← WRONG. If it was mentioned, it matters. Include it.
+- "This detail is minor, I can skip it" ← Check: Is it a decision, metric, or technical fact? If yes, INCLUDE. Is it pure small talk with no relationship insight? Then skip.
 - "Let me summarize this part" ← WRONG. Summarizing = detail loss. Expand, don't compress.
 - "This is getting too long" ← WRONG. Length is not a problem. Detail loss is.
 - "I'll keep it concise" ← WRONG. Concise = detail loss. Comprehensive is the default.
-- "The user probably doesn't need all this" ← WRONG. The user EXPLICITLY wants all details preserved.
+- "The user probably doesn't need all this" ← WRONG. The user EXPLICITLY wants all business-relevant details preserved.
 - "I can combine these points" ← WRONG. Combining often loses nuance. Keep them separate.
 - "This quote is too long to include" ← WRONG. Long quotes preserve voice and context. Include them.
 - "I'll paraphrase instead of quoting" ← WRONG. Original words carry weight. Quote when possible.
+- "This is just small talk" ← Check: Does it reveal relationship dynamics, shared pain, or power structures? If yes, INCLUDE.
 
 **Time & Location:**
 - "The date is enough, time doesn't matter"
@@ -549,10 +573,11 @@ If you catch yourself thinking:
 - "The user didn't provide it" ← CHECK AGAIN
 
 **Counterparty Research:**
-- "The company is famous, no need to research" ← Famous ≠ understood. Research anyway.
-- "I know this company already" ← Memory is not a source. Search.
+- "The company is famous, no need to research" ← Famous ≠ understood. Research anyway (for EXTERNAL meetings).
+- "I know this company already" ← Memory is not a source. Search (for EXTERNAL meetings).
 - "There's no public info on their team" ← Try harder: tech blogs, conference talks, LinkedIn.
-- "This is just an internal meeting" ← Counterparty = other teams too if cross-functional.
+- "This is just an internal meeting" ← Use Internal Alignment Context instead. Still document team roles, dependencies, and decision authority.
+- "Internal meetings don't need Phase 2" ← WRONG. They need Internal Alignment Context—just not web searches.
 
 **Terminology:**
 - "This term is too common to explain"
@@ -580,9 +605,10 @@ If you catch yourself thinking:
 
 | Excuse | Reality |
 |--------|---------|
-| **"It's getting too long"** | **Length is NOT a problem. Detail loss IS.** The default is comprehensive. If the source has 50 points, include 50 points. |
+| **"It's getting too long"** | **Length is NOT a problem. Detail loss IS.** The default is comprehensive. If the source has 50 business-relevant points, include 50 points. |
 | **"Let me keep it concise"** | **Concise = detail loss.** Brevity must be EXPLICITLY requested. Default is maximum detail preservation. |
-| **"This detail seems minor"** | **If it was mentioned, it matters.** You don't know what the reader will need. Include everything. |
+| **"This detail seems minor"** | **Is it a decision, metric, or technical fact?** Include it. Is it pure phatic communication with no relationship insight? Skip it. |
+| **"This is just small talk, skip it"** | **Check relationship signals.** "We had similar problems" = KEEP (shared context). "Nice weather today" = skip. |
 | **"I'll summarize this section"** | **Summarizing destroys nuance.** Expand and explain instead of compressing. |
 | **"The user can read the original"** | **The user wants a COMPLETE record.** They shouldn't need to cross-reference the source. |
 | **"This quote is too long"** | **Long quotes preserve voice and context.** Include them. Original words carry irreplaceable weight. |
@@ -606,7 +632,7 @@ If you catch yourself thinking:
 ## Key Principles
 
 **THE THREE ABSOLUTES (ALWAYS ON BY DEFAULT):**
-- **ZERO DETAIL LOSS** — Every fact, quote, nuance from source MUST appear. Nothing is too minor.
+- **ZERO BUSINESS-RELEVANT DETAIL LOSS** — Every decision, metric, technical fact, and contextual insight MUST appear. Filter pure phatic communication (small talk) UNLESS it reveals relationship dynamics.
 - **MAXIMUM TOKEN UTILIZATION** — Use 1500-2500+ words. Brevity is NOT a virtue. Depth is.
 - **HIGH-DENSITY NARRATIVE** — Every sentence carries weight. Tight storytelling, not padding.
 
@@ -779,7 +805,7 @@ Keep technical terms in **proper English** with explanation in target language.
 Transform the provided meeting inputs into narrative-driven, actionable notes following this structure.
 
 **REMEMBER — THE THREE ABSOLUTES ARE ALWAYS ON:**
-1. **ZERO DETAIL LOSS** — If it was in the source, it MUST be in the output
+1. **ZERO BUSINESS-RELEVANT DETAIL LOSS** — Every decision, metric, and technical fact MUST be in the output. Filter pure phatic communication unless it reveals relationship dynamics.
 2. **MAXIMUM TOKEN UTILIZATION** — 1500-2500+ words. Brevity is NOT the goal.
 3. **HIGH-DENSITY NARRATIVE** — Tight, structured storytelling with substance
 
