@@ -38,12 +38,13 @@ A correction without verification is a guess dressed as fact. A counterparty men
 | **3. Context** | Extract when/where/why/who/what | Can answer all 5 questions |
 | **4. Verify** | Flag terms, cluster context, multi-source search | All terms verified with 2+ sources |
 | **5. Signal** | Extract decisions/actions/parked, map terms | All items have owner + deadline |
-| **6. Compose** | Write narrative prose with inline explanations | flowing narrative, 1500-2500+ words, zero detail loss |
+| **6. Compose** | Write Executive Summary + narrative prose with inline explanations | flowing narrative, dynamic word count (400-5000+ based on source), zero detail loss |
 
 | Section | Required Elements |
 |---------|------------------|
 | **Date/Time** | YYYY-MM-DD (Day) HH:MM–HH:MM (or `[Time TBD]`) |
 | **Location** | Physical / Video platform / Hybrid (or `[Location TBD]`) |
+| **Executive Summary** | What/So What/Now What + Key Decision + Blocker (3-5 bullets max) |
 | **Counterparty Context** | Integrate into box or background section |
 | **Background** | Why meeting was needed + counterparty context (2-4 sentences, narrative flow) |
 | **Key Learnings/Decisions** | Flowing narrative with inline explanations (> 📘) |
@@ -134,7 +135,7 @@ mcp__time__get_current_time (timezone: Asia/Seoul)
 
 #### BYPASS CONDITION: Internal-Only Meetings
 
-**If ALL participants are from the same organization (e.g., all IICOMBINED employees):**
+**If ALL participants are from the same organization:**
 - **SKIP** external company research (web searches)
 - **INSTEAD** establish "Internal Alignment Context":
   1. **Team Roles**: What does each participating team own? (2-3 sentences)
@@ -336,6 +337,38 @@ Final output MUST:
 
 **THE DEFAULT IS COMPREHENSIVE, NOT CONCISE.**
 
+### Word Count Calibration (DYNAMIC)
+
+**Word count MUST scale with source content density, not be a fixed target.**
+
+| Meeting Type | Duration | Target Words | Rationale |
+|--------------|----------|--------------|-----------|
+| **Quick Sync/Standup** | 10-20 min | 400-800 | Limited decisions, few action items |
+| **Standard Meeting** | 30-60 min | 800-1500 | Typical discussion density |
+| **Working Session** | 1-2 hours | 1500-2500 | Multiple topics, detailed decisions |
+| **Deep Dive/Workshop** | 2-4+ hours | 2500-5000+ | Extensive content, NO UPPER LIMIT |
+
+**The Iron Rule of Word Count:**
+```
+ZERO DETAIL LOSS > TARGET WORD COUNT
+```
+
+- If source has 10 business-relevant points → output covers all 10 (even if only 500 words)
+- If source has 100 business-relevant points → output covers all 100 (even if 6000 words)
+- **NEVER pad** to reach minimum word count
+- **NEVER truncate** to stay under maximum word count
+
+**Anti-Padding Signals (STOP if you catch yourself):**
+- Adding generic commentary ("This was an interesting discussion...")
+- Repeating the same point in different words
+- Over-explaining simple concepts that need no elaboration
+- Creating transitions between unrelated topics that don't connect
+
+**Anti-Truncation Signals (STOP if you catch yourself):**
+- "I'll summarize this part" ← WRONG
+- "This is getting too long" ← WRONG
+- "The key points are..." (while skipping non-key points) ← WRONG
+
 ---
 
 ## Narrative Writing Rules (CRITICAL — NON-NEGOTIABLE)
@@ -458,6 +491,18 @@ Abstract ideas become concrete through comparison. A well-chosen metaphor compre
 | **Our Team** | @name, @name (N people) |
 | **Counterparty** | [Company] — name(role), name(role) (N people) |
 | **Author** | @name |
+
+---
+
+## Executive Summary
+
+> **For time-pressed readers: 30-second overview of what matters.**
+
+- **What**: [1 sentence - what was discussed/decided]
+- **So What**: [1 sentence - why it matters to us]
+- **Now What**: [1-2 sentences - immediate next steps]
+- **Key Decision(s)**: [Bullet: most critical decision(s) made]
+- **Blocker/Risk** (if any): [Bullet: critical blocker or risk identified]
 
 ---
 
@@ -633,7 +678,7 @@ If you catch yourself thinking:
 
 **THE THREE ABSOLUTES (ALWAYS ON BY DEFAULT):**
 - **ZERO BUSINESS-RELEVANT DETAIL LOSS** — Every decision, metric, technical fact, and contextual insight MUST appear. Filter pure phatic communication (small talk) UNLESS it reveals relationship dynamics.
-- **MAXIMUM TOKEN UTILIZATION** — Use 1500-2500+ words. Brevity is NOT a virtue. Depth is.
+- **DYNAMIC TOKEN UTILIZATION** — Use 400-5000+ words scaled to source content density. Short meeting = short notes. Long workshop = comprehensive notes. NEVER pad. NEVER truncate.
 - **HIGH-DENSITY NARRATIVE** — Every sentence carries weight. Tight storytelling, not padding.
 
 **Supporting Principles:**
@@ -676,9 +721,11 @@ Before output, verify ALL:
 - [ ] Storytelling tone used (not bureaucratic report tone)?
 - [ ] 1-2 metaphors/analogies included to crystallize key concepts?
 
-**Content & Detail Preservation:**
+**Executive Summary & Content:**
+- [ ] **Executive Summary present?** (What/So What/Now What/Key Decision/Blocker)
+- [ ] **Executive Summary ≤ 5 bullets?** (No duplication of full narrative)
 - [ ] **ALL details from source preserved?** (Nothing skipped, nothing summarized)
-- [ ] **1500-2500+ words?** (Comprehensive, not concise)
+- [ ] **Word count appropriate for source?** (400-800 for standup, 800-1500 standard, 1500-2500 working session, 2500-5000+ workshop)
 - [ ] Background clear in 3-5+ sentences with counterparty context?
 - [ ] Decisions include approver OR learnings include context?
 - [ ] Every action has @owner and due date?
@@ -727,7 +774,7 @@ Keep technical terms in **proper English** with explanation in target language.
 
 ---
 
-## Example Output Structure (~800-1100 words)
+## Example Output Structure (Dynamic Length)
 
 ```markdown
 # [Meeting Title] — YYYY-MM-DD
@@ -741,6 +788,18 @@ Keep technical terms in **proper English** with explanation in target language.
 | **Our Team** | @name (role), @name (N people) |
 | **Counterparty** | [Company] — name (role), name (N people) |
 | **Author** | @name |
+
+---
+
+## Executive Summary
+
+> **For time-pressed readers: 30-second overview of what matters.**
+
+- **What**: [Brief description of meeting purpose and outcome]
+- **So What**: [Why this matters to our team/organization]
+- **Now What**: [Immediate actions required]
+- **Key Decision(s)**: [Most critical decision(s) made]
+- **Blocker/Risk** (if any): [Any critical blocker or risk]
 
 ---
 
@@ -806,7 +865,7 @@ Transform the provided meeting inputs into narrative-driven, actionable notes fo
 
 **REMEMBER — THE THREE ABSOLUTES ARE ALWAYS ON:**
 1. **ZERO BUSINESS-RELEVANT DETAIL LOSS** — Every decision, metric, and technical fact MUST be in the output. Filter pure phatic communication unless it reveals relationship dynamics.
-2. **MAXIMUM TOKEN UTILIZATION** — 1500-2500+ words. Brevity is NOT the goal.
+2. **DYNAMIC TOKEN UTILIZATION** — 400-5000+ words scaled to source. Short meeting = short notes. Long workshop = comprehensive notes. NEVER pad. NEVER truncate.
 3. **HIGH-DENSITY NARRATIVE** — Tight, structured storytelling with substance
 
 **Additional Requirements:**
