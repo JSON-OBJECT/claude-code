@@ -13,10 +13,10 @@ You are conducting a **rapid trend analysis** to discover the hottest issues in 
 ## The Iron Law
 
 ```
-NO REPORT WITHOUT 5+ SUBREDDITS AND 75+ POSTS SCANNED FIRST.
+NO REPORT WITHOUT PHASE-BY-PHASE GATE VERIFICATION FIRST.
 ```
 
-A pulse report with fewer data points is noise, not signal. Comprehensive scanning is non-negotiable.
+Each phase has explicit gate conditions. You MUST verify every gate before proceeding. Skipping gates produces shallow reports regardless of post count.
 
 **Violating the letter of this rule is violating the spirit of trend analysis.**
 
@@ -84,10 +84,10 @@ If you catch yourself thinking:
 | Phase | Key Activities | Success Criteria |
 |-------|---------------|------------------|
 | **0. Clarification** | Interpret field, identify sub-domains | 5-10 specific sub-domains listed |
-| **1. Discovery** | Search subreddits, cross-reference known lists | 5-8 subreddits selected with justification |
-| **2. Aggregation** | Fetch hot threads from each sub | 75+ posts collected with metadata |
+| **1. Discovery** | Search subreddits, validate activity (limit=5 probe) | 5-8 **validated active** subreddits |
+| **2. Aggregation** | Fetch threads, generate Micro-Summaries, flag CROSS-SUB | 75+ posts + Micro-Summaries per sub |
 | **3. Cross-Validation** | News search, Reddit-news comparison | News sources cross-referenced |
-| **4. Clustering** | Keyword extraction, heat scoring, tagging | TOP 10 issues ranked with scores |
+| **4. Clustering** | Keyword extraction, heat scoring (use CROSS-SUB flags) | TOP 10 issues ranked with scores |
 | **5. Deep Dive** | Fetch content for TOP 3 | Representative quotes extracted |
 
 ---
@@ -169,15 +169,27 @@ Select **5-8 subreddits** based on:
 - **Quality**: Known for substantive discussions (not just memes)
 - **Diversity**: Mix of general and niche communities
 
-**Output**: Ordered list of selected subreddits with brief justification
+#### Activity Threshold Validation (REQUIRED)
 
-**You cannot proceed to Phase 2 until you have 5-8 subreddits selected.**
+**Before finalizing subreddit selection, validate each candidate:**
+
+1. **Quick Probe**: `mcp__reddit__fetch_reddit_hot_threads(subreddit, limit=5)`
+2. **Pass Criteria**: 5 posts returned within last 7 days
+3. **Fail Action**: Skip subreddit, search for replacement
+
+**Fallback Protocol**:
+- If 2+ candidates fail validation → return to Discovery step for additional subreddits
+- MINIMUM 5 validated active subreddits required before proceeding
+
+**Output**: Ordered list of **validated** subreddits with brief justification
+
+**You cannot proceed to Phase 2 until you have 5-8 validated active subreddits.**
 
 ---
 
 ### Phase 2: Hot Content Aggregation
 
-**GATE: Phase 1 MUST be complete with 5-8 subreddits selected.**
+**GATE: Phase 1 MUST be complete with 5-8 validated active subreddits.**
 
 **For each selected subreddit, fetch hot threads:**
 
@@ -185,6 +197,8 @@ Select **5-8 subreddits** based on:
 For each subreddit in selected_list:
     mcp__reddit__fetch_reddit_hot_threads(subreddit, limit=15)
     Record: title, upvotes, comment_count, post_id, url
+    Generate: Micro-Summary (see below)
+    Detect: Cross-subreddit duplicates (see below)
 ```
 
 **Collect approximately 75-120 posts total across all subreddits.**
@@ -201,7 +215,30 @@ For each post, note:
 | Subreddit | Community context |
 | Flair (if any) | Topic categorization |
 
-**You cannot proceed to Phase 3 until you have 75+ posts collected.**
+#### Micro-Summary Protocol (Memory Optimization)
+
+**After scanning each subreddit, immediately generate:**
+
+```
+r/[subreddit]: [keyword1], [keyword2], [keyword3] | Top: [highest upvote count] | Posts: [N]
+```
+
+**Purpose**:
+- Prevents context window overload during final report generation
+- Raw data retained for reference, but Micro-Summary used as primary source in Phase 4
+- If specific quote needed later → re-fetch in Phase 5
+
+#### Real-Time Cross-Subreddit Detection
+
+**While collecting posts, flag duplicates immediately:**
+
+1. Extract key terms from each post title (product names, version numbers, company names)
+2. If new post shares 70%+ key terms with previously seen post from different subreddit → flag as `CROSS-SUB`
+3. Flagged posts get automatic +50 Heat Score bonus in Phase 4
+
+**This eliminates N² comparison overhead in Phase 4 clustering.**
+
+**You cannot proceed to Phase 3 until you have 75+ posts collected with Micro-Summaries generated.**
 
 ---
 
@@ -378,9 +415,12 @@ Before generating the report, verify ALL items:
 
 - [ ] `mcp__time__get_current_time` called for temporal context
 - [ ] At least 5 subreddits identified and justified
+- [ ] **All subreddits validated with activity probe (limit=5, 5+ posts in 7 days)**
 - [ ] 75+ posts scanned across all subreddits
+- [ ] **Micro-Summary generated for each subreddit after scanning**
+- [ ] **CROSS-SUB flags applied to duplicate topics across subreddits**
 - [ ] `brave_news_search` executed for cross-validation
-- [ ] Heat Scores calculated with documented formula
+- [ ] Heat Scores calculated with documented formula (including CROSS-SUB bonus)
 - [ ] TOP 3 issues have detailed post content extracted
 - [ ] Emerging signals section populated (not just TOP 10)
 - [ ] All `/deep-research` recommendations are specific and actionable
@@ -391,7 +431,11 @@ Before generating the report, verify ALL items:
 
 ## Key Principles
 
-- **Breadth Before Depth** - 5+ subreddits ALWAYS, narrow focus kills discovery
+- **Gate-by-Gate Verification** - Each phase gate MUST be passed before proceeding
+- **Validate Before Scan** - Probe subreddits (limit=5) to avoid wasting calls on dead communities
+- **Compress As You Go** - Micro-Summary after each subreddit prevents context overload
+- **Flag Duplicates Early** - CROSS-SUB detection during collection, not after
+- **Breadth Before Depth** - 5+ validated subreddits ALWAYS, narrow focus kills discovery
 - **Cross-Validation Required** - Reddit-only = echo chamber, news comparison mandatory
 - **Heat Score Discipline** - No "gut feeling" rankings, formula or nothing
 - **Emerging Signals Matter** - Today's weak signal = tomorrow's headline
