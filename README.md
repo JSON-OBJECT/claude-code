@@ -145,16 +145,37 @@ Claude Code uses `CLAUDE.md` files as persistent memory:
 
 The `CLAUDE.md` in this repository root serves as the **global memory** template, defining behavioral rules, MCP server usage patterns, and response preferences.
 
-## Custom Slash Commands
+## Deep Thinking Plugin
 
-Located in `./commands/`:
+This repository is a **Claude Code Plugin Marketplace** containing the `deep-thinking` plugin.
+
+### Installation
+
+```bash
+# Add marketplace (one-time setup)
+/plugin marketplace add JSON-OBJECT/claude-code
+
+# Install plugin
+/plugin install deep-thinking@jsonobject-marketplace
+
+# Restart Claude Code to load the plugin
+```
+
+### Commands
 
 | Command | Description |
 |---------|-------------|
-| `/pulse {field}` | Trend radar scanning 5+ subreddits and 75+ posts to identify hot issues before deep research |
-| `/deep-research {topic}` | Comprehensive multi-source research with 15+ searches, Reddit/news cross-validation, and Ki-Sho-Ten-Ketsu structured report |
-| `/meeting-notes {transcript}` | Transform meeting transcripts into narrative-driven documentation with counterparty research and verified terminology |
-| `/forge-prompt {description}` | Create bulletproof instructions/skills with Iron Laws, anti-rationalization tables, and mandatory checklists |
+| `/dt:pulse {field}` | Trend radar scanning 5+ subreddits and 75+ posts to identify hot issues before deep research |
+| `/dt:deep-research {topic}` | Comprehensive multi-source research with 15+ searches, Reddit/news cross-validation, and Ki-Sho-Ten-Ketsu structured report |
+| `/dt:meeting-notes {transcript}` | Transform meeting transcripts into narrative-driven documentation with counterparty research and verified terminology |
+| `/dt:forge-prompt {description}` | Create bulletproof instructions/skills with Iron Laws, anti-rationalization tables, and mandatory checklists |
+
+### Requirements
+
+- Claude Code 1.0.33+
+- Brave Search MCP (for `/dt:deep-research`, `/dt:pulse`)
+- Reddit MCP (for `/dt:pulse`)
+- Time MCP (for temporal context)
 
 ## References
 
