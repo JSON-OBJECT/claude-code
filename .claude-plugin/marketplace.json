@@ -14,7 +14,7 @@
     {
       "name": "deep-thinking",
       "description": "Advanced slash commands for deep research, prompt engineering, trend analysis, and meeting documentation",
-      "source": "./deep-thinking",
+      "source": "./plugins/deep-thinking",
       "version": "1.0.0",
       "category": "productivity",
       "keywords": [
