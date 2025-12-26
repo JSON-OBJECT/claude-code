@@ -165,17 +165,19 @@ This repository is a **Claude Code Plugin Marketplace** containing the `deep-thi
 
 | Command | Description |
 |---------|-------------|
-| `/dt:pulse {field}` | Trend radar scanning 5+ subreddits and 75+ posts to identify hot issues before deep research |
-| `/dt:deep-research {topic}` | Comprehensive multi-source research with 15+ searches, Reddit/news cross-validation, and Ki-Sho-Ten-Ketsu structured report |
-| `/dt:meeting-notes {transcript}` | Transform meeting transcripts into narrative-driven documentation with counterparty research and verified terminology |
-| `/dt:forge-prompt {description}` | Create bulletproof instructions/skills with Iron Laws, anti-rationalization tables, and mandatory checklists |
+| `/deep-thinking:pulse {field}` | Trend radar scanning 5+ subreddits and 75+ posts to identify hot issues before deep research |
+| `/deep-thinking:deep-research {topic}` | Comprehensive multi-source research with 15+ searches, Reddit/news cross-validation, and Ki-Sho-Ten-Ketsu structured report |
+| `/deep-thinking:meeting-notes {transcript}` | Transform meeting transcripts into narrative-driven documentation with counterparty research and verified terminology |
+| `/deep-thinking:forge-prompt {description}` | Create bulletproof instructions/skills with Iron Laws, anti-rationalization tables, and mandatory checklists |
 
-### Requirements
+### MCP Server Dependencies
 
-- Claude Code 1.0.33+
-- Brave Search MCP (for `/dt:deep-research`, `/dt:pulse`)
-- Reddit MCP (for `/dt:pulse`)
-- Time MCP (for temporal context)
+| Command | Required | Optional |
+|---------|----------|----------|
+| `/deep-thinking:deep-research` | Time, Brave Search, Reddit | - |
+| `/deep-thinking:pulse` | Time, Brave Search, Reddit | - |
+| `/deep-thinking:forge-prompt` | None | - |
+| `/deep-thinking:meeting-notes` | Time, Brave Search | Context7, Fetch |
 
 ## References
 
