@@ -163,14 +163,104 @@ This repository is a **Claude Code Plugin Marketplace** containing the `deep-thi
 
 ### Commands
 
-| Command | Description |
-|---------|-------------|
-| `/deep-thinking:pulse {topic}` | Trend radar scanning 5+ subreddits and 75+ posts to identify hot issues before deep research |
-| `/deep-thinking:deep-research {topic}` | Comprehensive multi-source research with 15+ searches, Reddit/news cross-validation, and Ki-Sho-Ten-Ketsu structured report |
-| `/deep-thinking:forge-prompt {instruction}` | Create bulletproof instructions/skills with Iron Laws, anti-rationalization tables, and mandatory checklists |
-| `/deep-thinking:meeting-notes {transcript}` | Transform meeting transcripts into narrative-driven documentation with counterparty research and verified terminology |
-| `/deep-thinking:translate-kr {article}` | Transcreate English IT articles into native Korean with terminology verification and anti-translation-artifact rules |
-| `/deep-thinking:blog-cover {title and concept}` | Generate anti-AI-looking blog cover image prompts for Gemini Nano Banana Pro with visual metaphors and title typography |
+#### `/deep-thinking:pulse {topic}` — Trend Radar
+> **Before you research, know WHAT to research.**
+
+Scans 5-8 subreddits × 75+ posts to identify what's genuinely hot RIGHT NOW.
+
+| Feature | What It Does |
+|---------|--------------|
+| **Heat Score Formula** | Objective ranking: (Upvotes × 0.4) + (Comments × 0.3) + (Cross-sub × 0.2) + (Recency × 0.1) |
+| **News Cross-Validation** | Compares Reddit trends against mainstream news — prevents echo chamber reports |
+| **Emerging Signals Watch** | Tracks low-heat topics with rising momentum — tomorrow's headlines today |
+| **Actionable Output** | Every issue includes a ready-to-run `/deep-research` query |
+
+**Use before:** `/deep-research` — ensures you research the RIGHT topic, not just any topic.
+
+---
+
+#### `/deep-thinking:deep-research {topic}` — Forensic Tech Audit
+> **One-shot research that answers questions before you ask them.**
+
+Conducts 15-20+ searches with mandatory Phase Zero "Unknown Unknowns" discovery.
+
+| Feature | What It Does |
+|---------|--------------|
+| **Phase Zero Protocol** | Questions the question itself — catches terminology confusion, outdated assumptions, missed prerequisites |
+| **One-Shot Completeness** | Anticipates 5 follow-up questions ("What is it?" → "How much?" → "Gotchas?" → "Show code" → "Verdict?") and answers ALL in one report |
+| **Ki-Sho-Ten-Ketsu Structure** | Four-act narrative (Setup → Development → Turn → Conclusion) — reads like investigative journalism, not bullet lists |
+| **Community + Official Balance** | Reddit/HN sentiment weighted proportionally against official sources — 70% positive / 30% concern = both reported |
+
+**Output:** Publication-ready deep dive that feels like Ars Technica meets Gemini Deep Research.
+
+---
+
+#### `/deep-thinking:forge-prompt {instruction}` — Instruction Smithy
+> **Build prompts that resist rationalization.**
+
+Creates bulletproof instructions following the Superpowers philosophy with 9 mandatory components.
+
+| Component | Purpose |
+|-----------|---------|
+| **Iron Law** | ONE non-negotiable rule that guarantees failure if broken |
+| **Red Flags Section** | Mental patterns that signal you're about to fail — "If you catch yourself thinking..." |
+| **Rationalization Table** | Preempts every excuse with direct rebuttal — Excuse \| Reality format |
+| **Phase Gates** | Clear checkpoints that MUST be passed before proceeding |
+| **Strong Language Protocol** | MUST/NEVER/ALWAYS — no soft language ("should", "consider", "try to") |
+
+**Philosophy:** If you think you don't need the structure, you need it most.
+
+---
+
+#### `/deep-thinking:meeting-notes {transcript}` — Narrative Documentation
+> **Meeting notes that tell a story, not list fragments.**
+
+Transforms raw transcripts into narrative-driven documentation with 6-phase verification.
+
+| Feature | What It Does |
+|---------|--------------|
+| **Counterparty Intelligence** | External meetings: 3+ searches per counterparty for context (size, tech stack, recent news) |
+| **STT Error Correction** | Catches phonetic mishearings ("jenkinsun" → "Jenkins") with 2+ source verification |
+| **Immediate Inline Definitions** | Technical terms explained right where they appear (> 📘 format), not buried in glossary |
+| **Storytelling Tone + Metaphors** | Mandatory 1-2 metaphors per document — "From gatekeeper to guardrail" style |
+| **Zero Detail Loss** | Every business-relevant point preserved — 400-5000+ words scaled to source density |
+
+**Anti-pattern:** Bullet lists. This produces flowing narrative with cause-and-effect reasoning.
+
+---
+
+#### `/deep-thinking:translate-kr {article}` — Korean Transcreation
+> **Rewriting in Korean, not converting English structures.**
+
+Transcreates English IT articles into native Korean with terminology verification and 10 anti-artifact rules.
+
+| Feature | What It Does |
+|---------|--------------|
+| **Tier 1/2 Verification** | Established terms: 1 official source / New terms: 2+ sources including community (velog, tistory) |
+| **10 Anti-Translation-Artifact Rules** | Pronoun elimination, Passive→Active, Sino-Korean ban, Emotional modifier ban, etc. |
+| **Community Standard Priority** | If Korean dev community uses English 70%+ of the time, keep English (Token, Prompt, Fine-tuning) |
+| **Code Block Protection** | NEVER modifies content inside code blocks or inline code |
+
+**Key insight:** "Fine-tuning" → "파인튜닝" (community usage), NOT "미세 조정" (textbook translation).
+
+---
+
+#### `/deep-thinking:blog-cover {title and concept}` — Creative Director for Gemini
+> **Anti-AI-looking blog covers that make readers curious.**
+
+Generates image prompts for Gemini Nano Banana Pro with 6-phase visual storytelling.
+
+| Feature | What It Does |
+|---------|--------------|
+| **Visual Metaphor First** | Every cover starts with an unexpected analogy — "Kubernetes = postal worker sorting containers" |
+| **Chain-of-Thought Composition** | Explicit 9-grid spatial positioning — asymmetry always, center composition = AI tell |
+| **Anti-AI Armor** | Mandatory "Avoid" section with 8+ items (symmetry, HDR, plastic textures, generic tech imagery) |
+| **Imperfection Keywords** | 2-3 required: "visible brushstrokes", "analog film grain", "slightly uneven lines" |
+| **Title Typography Mandatory** | Every prompt includes title overlay specifications — covers without title = incomplete |
+
+**Artist references:** Christoph Niemann, Saul Steinberg, The New Yorker editorial style.
+
+---
 
 ### MCP Server Dependencies
 
