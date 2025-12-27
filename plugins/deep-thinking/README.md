@@ -55,6 +55,19 @@ A Claude Code plugin for deep research, prompt engineering, trend analysis, and 
 | `/deep-thinking:meeting-notes` | Time, Brave Search | Context7, Fetch |
 | `/deep-thinking:translate-kr` | Brave Search | - |
 
+### Quick MCP Setup
+
+```bash
+# Time
+claude mcp add time -s user -- uvx mcp-server-time
+
+# Brave Search (get API key: https://brave.com/search/api)
+claude mcp add-json -s user brave-search '{"command":"npx","args":["-y","brave-search-mcp"],"env":{"BRAVE_API_KEY":"YOUR_API_KEY"}}'
+
+# Reddit
+claude mcp add reddit -s user -- uvx --from git+https://github.com/adhikasp/mcp-reddit.git mcp-reddit
+```
+
 ## License
 
 MIT
