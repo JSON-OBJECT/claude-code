@@ -170,6 +170,7 @@ This repository is a **Claude Code Plugin Marketplace** containing the `deep-thi
 | `/deep-thinking:forge-prompt {instruction}` | Create bulletproof instructions/skills with Iron Laws, anti-rationalization tables, and mandatory checklists |
 | `/deep-thinking:meeting-notes {transcript}` | Transform meeting transcripts into narrative-driven documentation with counterparty research and verified terminology |
 | `/deep-thinking:translate-kr {article}` | Transcreate English IT articles into native Korean with terminology verification and anti-translation-artifact rules |
+| `/deep-thinking:blog-cover {title and concept}` | Generate anti-AI-looking blog cover image prompts for Gemini Nano Banana Pro with visual metaphors and title typography |
 
 ### MCP Server Dependencies
 
@@ -180,6 +181,7 @@ This repository is a **Claude Code Plugin Marketplace** containing the `deep-thi
 | `/deep-thinking:forge-prompt` | None | - |
 | `/deep-thinking:meeting-notes` | Time, Brave Search | Context7, Fetch |
 | `/deep-thinking:translate-kr` | Brave Search | - |
+| `/deep-thinking:blog-cover` | None | - |
 
 ## References
 

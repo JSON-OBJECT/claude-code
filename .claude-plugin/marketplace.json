@@ -21,7 +21,9 @@
         "research",
         "prompt-engineering",
         "meeting-notes",
-        "trend-analysis"
+        "trend-analysis",
+        "blog-cover",
+        "image-prompt"
       ],
       "author": {
         "name": "JSON-OBJECT"
