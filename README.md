@@ -165,19 +165,21 @@ This repository is a **Claude Code Plugin Marketplace** containing the `deep-thi
 
 | Command | Description |
 |---------|-------------|
-| `/deep-thinking:pulse {field}` | Trend radar scanning 5+ subreddits and 75+ posts to identify hot issues before deep research |
+| `/deep-thinking:pulse {topic}` | Trend radar scanning 5+ subreddits and 75+ posts to identify hot issues before deep research |
 | `/deep-thinking:deep-research {topic}` | Comprehensive multi-source research with 15+ searches, Reddit/news cross-validation, and Ki-Sho-Ten-Ketsu structured report |
+| `/deep-thinking:forge-prompt {instruction}` | Create bulletproof instructions/skills with Iron Laws, anti-rationalization tables, and mandatory checklists |
 | `/deep-thinking:meeting-notes {transcript}` | Transform meeting transcripts into narrative-driven documentation with counterparty research and verified terminology |
-| `/deep-thinking:forge-prompt {description}` | Create bulletproof instructions/skills with Iron Laws, anti-rationalization tables, and mandatory checklists |
+| `/deep-thinking:translate-kr {article}` | Transcreate English IT articles into native Korean with terminology verification and anti-translation-artifact rules |
 
 ### MCP Server Dependencies
 
 | Command | Required | Optional |
 |---------|----------|----------|
-| `/deep-thinking:deep-research` | Time, Brave Search, Reddit | - |
 | `/deep-thinking:pulse` | Time, Brave Search, Reddit | - |
+| `/deep-thinking:deep-research` | Time, Brave Search, Reddit | - |
 | `/deep-thinking:forge-prompt` | None | - |
 | `/deep-thinking:meeting-notes` | Time, Brave Search | Context7, Fetch |
+| `/deep-thinking:translate-kr` | Brave Search | - |
 
 ## References
 

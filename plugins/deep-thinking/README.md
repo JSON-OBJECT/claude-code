@@ -16,10 +16,11 @@ A Claude Code plugin for deep research, prompt engineering, trend analysis, and 
 
 | Command | Description |
 |---------|-------------|
+| `/deep-thinking:pulse {topic}` | Trend radar scanning 5+ subreddits and 75+ posts to identify hot issues before deep research |
 | `/deep-thinking:deep-research {topic}` | Comprehensive multi-source research with 15+ searches, Reddit/news cross-validation, and Ki-Sho-Ten-Ketsu structured report |
-| `/deep-thinking:pulse {field}` | Trend radar scanning 5+ subreddits and 75+ posts to identify hot issues before deep research |
-| `/deep-thinking:forge-prompt {description}` | Create bulletproof instructions/skills with Iron Laws, anti-rationalization tables, and mandatory checklists |
+| `/deep-thinking:forge-prompt {instruction}` | Create bulletproof instructions/skills with Iron Laws, anti-rationalization tables, and mandatory checklists |
 | `/deep-thinking:meeting-notes {transcript}` | Transform meeting transcripts into narrative-driven documentation with counterparty research and verified terminology |
+| `/deep-thinking:translate-kr {article}` | Transcreate English IT articles into native Korean with terminology verification and anti-translation-artifact rules |
 
 ## Usage Examples
 
@@ -35,6 +36,9 @@ A Claude Code plugin for deep research, prompt engineering, trend analysis, and 
 
 # Process meeting transcript
 /deep-thinking:meeting-notes [paste transcript or provide file path]
+
+# Translate English IT article to Korean
+/deep-thinking:translate-kr [paste English article or provide file path]
 ```
 
 ## Requirements
@@ -45,10 +49,11 @@ A Claude Code plugin for deep research, prompt engineering, trend analysis, and 
 
 | Command | Required | Optional |
 |---------|----------|----------|
-| `/deep-thinking:deep-research` | Time, Brave Search, Reddit | - |
 | `/deep-thinking:pulse` | Time, Brave Search, Reddit | - |
+| `/deep-thinking:deep-research` | Time, Brave Search, Reddit | - |
 | `/deep-thinking:forge-prompt` | None | - |
 | `/deep-thinking:meeting-notes` | Time, Brave Search | Context7, Fetch |
+| `/deep-thinking:translate-kr` | Brave Search | - |
 
 ## License
 
