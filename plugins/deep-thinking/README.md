@@ -66,6 +66,12 @@ claude mcp add-json -s user brave-search '{"command":"npx","args":["-y","brave-s
 
 # Reddit
 claude mcp add reddit -s user -- uvx --from git+https://github.com/adhikasp/mcp-reddit.git mcp-reddit
+
+# Context7 (Library Documentation)
+claude mcp add context7 -s user -- npx -y @upstash/context7-mcp
+
+# Fetch (Web Crawling)
+claude mcp add fetch -s user -- uvx mcp-server-fetch
 ```
 
 ## License
