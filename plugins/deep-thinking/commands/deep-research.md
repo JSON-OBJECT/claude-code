@@ -10,10 +10,94 @@ You are conducting a **comprehensive deep research** on the following topic:
 
 ---
 
+## Mode Detection — Automatic
+
+```
+DETECT MODE FROM $ARGUMENTS. This is not optional.
+```
+
+**Step 1: Scan `$ARGUMENTS` for an existing file path** (e.g., `.md`, `.txt`, or any text file reference).
+
+| Condition | Mode | Action |
+|-----------|------|--------|
+| `$ARGUMENTS` contains a path to an **existing file** | **Refinement Mode** | Read the file first, then refine it |
+| `$ARGUMENTS` contains only a **topic/question** (no existing file) | **Original Mode** | Conduct fresh deep research (all instructions below apply as-is) |
+| `$ARGUMENTS` contains **both** a file path AND additional instructions | **Refinement Mode** with user guidance | Read the file, apply additional instructions as refinement focus |
+
+**If Refinement Mode is detected, skip to the "Refinement Mode Protocol" section below, then return here for research execution.**
+
+**If Original Mode is detected, proceed with all sections below as normal.**
+
+---
+
+## Refinement Mode Protocol
+
+```
+NEVER append findings as a separate section. ALWAYS weave into the original narrative.
+"Adding a 'Phase 2 Findings' section at the bottom" = failure.
+```
+
+**This mode activates when `$ARGUMENTS` references an existing report file.** The goal is to **elevate the original report** — not annotate it, not append to it, but make it stronger as if it were always this good.
+
+### Refinement Workflow
+
+1. **Read the original report completely** — understand its structure, narrative arc, claims, and tone
+2. **Extract every factual claim** — dates, numbers, names, quotes, URLs, statistics
+3. **Conduct full research** (Phase Zero + Adaptive Deep Search as defined below) focused on:
+   - **Fact verification**: Cross-check every major claim against current sources
+   - **Gap detection**: What important angles does the report NOT cover?
+   - **Stale information**: What has changed since the report was written?
+   - **Unknown unknowns**: What would the reader wish they knew after reading this?
+4. **Propose edits to the original file** that weave all discoveries seamlessly into the existing Ki-Sho-Ten-Ketsu structure
+
+### The Seamless Integration Rule
+
+```
+The refined report MUST read as a single, cohesive narrative.
+A reader seeing it for the first time MUST NOT be able to tell which parts are original and which are new.
+```
+
+**Integration principles:**
+- **Strengthen existing sections** — add depth, correct inaccuracies, update data inline
+- **Expand where thin** — if a section lacks evidence, add sources and detail within that section
+- **Correct silently** — replace wrong facts with right ones; do not flag "this was previously incorrect"
+- **Add new insights naturally** — if an important angle was missing, weave it into the most relevant existing section
+- **Preserve voice and tone** — match the original report's writing style exactly
+- **Maintain structural integrity** — do not reorganize sections unless the structure itself is flawed
+
+### Refinement Red Flags
+
+If you catch yourself doing ANY of these, STOP:
+- Adding a "Updates" or "New Findings" section → **WRONG. Weave in.**
+- Using phrases like "upon further research" or "additionally discovered" → **WRONG. Write as if it was always there.**
+- Leaving original inaccuracies intact with corrections alongside → **WRONG. Replace them.**
+- Only adding content without verifying existing content → **WRONG. Verify first, then expand.**
+
+### Refinement Gate — MANDATORY Before Proposing Edits
+
+```
+BEFORE proposing any edits to the original file:
+
+1. VERIFY: Did you fact-check at least 80% of the original claims?
+   → If not: STOP. You're skipping the hard part.
+
+2. CONFIRM: Did you conduct 10+ NEW searches beyond what the original covers?
+   → If not: STOP. You're not adding enough value.
+
+3. CHECK: Will your edits read seamlessly in the original narrative?
+   → If any edit feels "bolted on": REWRITE it until it flows.
+
+4. REVIEW: Did you preserve the original's tone and structure?
+   → If you reorganized without good reason: REVERT.
+```
+
+---
+
 ## The Iron Law
 
 ```
 NO REPORT WITHOUT 15+ SEARCHES AND PHASE ZERO FIRST.
+NO REFINEMENT WITHOUT FACT-CHECKING FIRST AND SEAMLESS INTEGRATION.
 "The moment you feel you've done enough is the most dangerous moment."
 ```
 
@@ -88,14 +172,140 @@ The user may be asking about the wrong concept, using incorrect terminology, or 
 
 ---
 
-### 1. Adaptive Deep Search Strategy (CRITICAL)
+### 1. Brave Search MCP 5-Tool Arsenal (CRITICAL)
+
+**Brave Search MCP provides 5 specialized tools. You MUST select the right tool for each query type.**
+
+```
+THE TOOL SELECTION RULE: Wrong tool = wrong results.
+"brave_web_search for everything" is LAZY. Use the right tool for the job.
+```
+
+#### The 5 Tools at Your Disposal
+
+| Tool | Best For | Parameters |
+|------|----------|------------|
+| `brave_web_search` | General information, technical docs, comparisons | query, count(1-20), freshness, offset |
+| `brave_news_search` | Current events, announcements, breaking news | query, count(1-20), freshness |
+| `brave_local_search` | Physical locations, businesses, restaurants, services | query (with location), count(1-20) |
+| `brave_image_search` | Visual references, product images, diagrams | searchTerm, count(1-3) |
+| `brave_video_search` | Tutorials, demos, reviews, visual explanations | query, count(1-20), freshness |
+
+#### Automatic Tool Selection Decision Tree
+
+**Step 1: Detect Query Intent**
+
+| Query Pattern | Primary Tool | Secondary Tools |
+|---------------|--------------|-----------------|
+| "What is X?", "How does X work?" | `brave_web_search` | `brave_video_search` for tutorials |
+| "X news", "X announced", "latest X" | `brave_news_search` | `brave_web_search` for background |
+| "X near Y", "best X in [location]", "X 맛집", "X 매장" | `brave_local_search` | `brave_web_search` for reviews |
+| "X vs Y", "[product] comparison", "alternatives to X" | `brave_web_search` | `brave_image_search` for visual comparison |
+| "How to X tutorial", "X demo", "X walkthrough" | `brave_video_search` | `brave_web_search` for written guides |
+| "What does X look like?", "X design", "X interface" | `brave_image_search` | `brave_web_search` for context |
+
+**Step 2: Apply Freshness Strategically**
+
+| Information Type | Freshness Setting |
+|------------------|-------------------|
+| Breaking news, announcements | `pd` (past day) or `pw` (past week) |
+| Recent developments, updates | `pm` (past month) |
+| Annual trends, yearly reviews | `py` (past year) |
+| Historical research, evergreen content | No freshness filter |
+| Custom date range research | `YYYY-MM-DDtoYYYY-MM-DD` |
+
+---
+
+### 1-A. Local Search Strategy (NEW)
+
+**CRITICAL for location-based queries: restaurants, stores, services, venues**
+
+#### When to Use `brave_local_search`
+
+| Trigger Keywords | Example Query |
+|------------------|---------------|
+| "near", "nearby", "근처", "주변" | "best ramen near Gangnam Station" |
+| "in [location]", "[location]에서" | "coffee shops in Itaewon" |
+| "맛집", "추천", "best [food/service]" | "홍대 브런치 맛집" |
+| Store/business names + location | "Apple Store locations Seoul" |
+| "[service] open now", "24시간" | "pharmacies open now near me" |
+
+#### Local Search Query Formulation
+
+```
+OPTIMAL FORMAT: "[business type/service] near [specific landmark/station/area]"
+```
+
+**Examples:**
+- ✅ "Italian restaurants near Seoul Station"
+- ✅ "카페 near 강남역"
+- ✅ "pet shops in Hongdae"
+- ❌ "good restaurants in Korea" (too broad)
+- ❌ "맛집" (no location context)
+
+#### Local Search Output Utilization
+
+`brave_local_search` returns structured data including:
+- **Business name and address**
+- **Ratings and review counts**
+- **Phone numbers**
+- **Opening hours**
+
+**ALWAYS format local search results as:**
+
+| 매장명 | 평점 | 리뷰 수 | 주소 | 영업시간 |
+|--------|------|---------|------|----------|
+| [Name] | ⭐ X.X | N reviews | [Address] | [Hours] |
+
+---
+
+### 1-B. Image & Video Search Strategy (NEW)
+
+#### When to Use `brave_image_search`
+
+| Use Case | Query Pattern |
+|----------|---------------|
+| Product visual comparison | "[product A] vs [product B]" |
+| UI/UX screenshots | "[app/tool] interface", "[app] dashboard" |
+| Architecture diagrams | "[technology] architecture diagram" |
+| Logo/branding research | "[company] logo" |
+| Before/after comparisons | "[product] before after" |
+
+**Limitations:** max 3 results per query. Use for visual context, not comprehensive coverage.
+
+#### When to Use `brave_video_search`
+
+| Use Case | Query Pattern |
+|----------|---------------|
+| Tutorial/how-to content | "how to [action] [tool] tutorial" |
+| Product demos | "[product] demo", "[product] walkthrough" |
+| Conference talks | "[topic] talk [conference name]" |
+| Review videos | "[product] review 2025" |
+| Comparison videos | "[X] vs [Y] comparison video" |
+
+**Pro tip:** Combine with `freshness: "py"` for recent tutorials on fast-evolving topics.
+
+---
+
+### 1-C. Adaptive Deep Search Strategy
 
 **DO NOT limit searches arbitrarily. Follow an adaptive, expansive research approach:**
 
 #### Minimum Search Requirements
-- **Baseline**: Conduct at least **15-20 separate web searches** before starting to write
+- **Baseline**: Conduct at least **15-20 separate searches** (across ALL 5 tools) before starting to write
 - **Follow the trail**: Each search result may reveal new keywords, related topics, or unanswered questions → **pursue them with additional searches**
 - **Never settle**: If initial searches only scratch the surface, keep digging until you have comprehensive coverage
+
+#### Search Tool Distribution Guide
+
+For a typical deep research session, aim for:
+- `brave_web_search`: 8-12 queries (core research)
+- `brave_news_search`: 2-4 queries (recent developments)
+- `brave_local_search`: 1-3 queries (if location-relevant)
+- `brave_video_search`: 1-2 queries (tutorials, demos)
+- `brave_image_search`: 1-2 queries (visual context)
+
+**Adjust based on topic:** Tech topics lean web/news. Food/travel topics lean local. Learning topics lean video.
 
 #### Search Expansion Triggers
 When search results reveal any of these, **immediately conduct follow-up searches**:
@@ -106,6 +316,9 @@ When search results reveal any of these, **immediately conduct follow-up searche
 - Expert names or key figures in the field
 - Scientific studies or research papers cited
 - Regional/country-specific information gaps
+- **Physical locations mentioned** → trigger `brave_local_search`
+- **Video tutorials referenced** → trigger `brave_video_search`
+- **Visual comparisons needed** → trigger `brave_image_search`
 
 #### Enhanced Expansion Triggers (Unknown Unknowns Detection)
 **Aggressively pursue these patterns when encountered:**
@@ -116,24 +329,30 @@ When search results reveal any of these, **immediately conduct follow-up searche
 - **Acronym disambiguation**: If an acronym has multiple meanings (e.g., "EDP" could mean multiple things), research all meanings
 - **"Actually, it's..." corrections**: When sources correct common misconceptions, treat the correct concept as high priority
 - **Prerequisite mentions**: If sources say "you need to understand A before B", research A immediately
+- **Location mentions**: If a specific place, store, or venue is mentioned → `brave_local_search`
 
 #### Multi-Source Depth Protocol
-1. Start with broad overview searches (English + user's language)
+1. Start with broad overview searches (English + user's language) using `brave_web_search`
 2. Dive into official sources (company announcements, regulatory filings)
-3. Extract community sentiment (Reddit posts with mcp__reddit__fetch_reddit_post_content)
-4. Check recent news (brave_news_search for latest developments)
-5. Verify with academic/scientific sources when applicable
-6. Cross-reference conflicting information across sources
+3. Check recent news with `brave_news_search` (use `freshness: "pw"` for past week)
+4. Extract community sentiment (Reddit posts with `mcp__reddit__fetch_reddit_post_content`)
+5. Find video tutorials/demos with `brave_video_search` when applicable
+6. Get visual context with `brave_image_search` for comparisons
+7. **If location-relevant:** Use `brave_local_search` for business/venue details
+8. Verify with academic/scientific sources when applicable
+9. Cross-reference conflicting information across sources
 
 #### Time Context Awareness
 - **ALWAYS** call `mcp__time__get_current_time` at the start to establish temporal context
 - Use freshness parameters (pd/pw/pm/py) appropriately for time-sensitive topics
 - Note publication dates and distinguish between outdated vs. current information
+- **For news searches:** Always use `freshness` parameter. `pd` for breaking, `pw` for recent.
 
 #### Language Strategy
 - Search in **both English AND the user's language** for comprehensive coverage
 - Different language sources often reveal different perspectives and local context
 - For global topics: EN sources for international view, local language for regional impact
+- **For local searches:** Use the local language for better results (e.g., "강남역 맛집" > "Gangnam Station restaurants")
 
 ---
 
@@ -304,8 +523,17 @@ Before you start writing the report, verify you have completed:
 ### Main Research Checklist
 - [ ] Called `mcp__time__get_current_time` to establish temporal context
 - [ ] Conducted **15-20 separate searches** across different angles
+
+#### Brave Search MCP 5-Tool Utilization Checklist
+- [ ] Used `brave_web_search` for **core research** (8-12 queries minimum)
+- [ ] Used `brave_news_search` with **freshness parameter** for recent developments (2-4 queries)
+- [ ] **If location-relevant:** Used `brave_local_search` for business/venue details
+- [ ] **If tutorial/demo needed:** Used `brave_video_search` for visual explanations
+- [ ] **If visual comparison needed:** Used `brave_image_search` for screenshots/diagrams
+- [ ] Applied **correct freshness parameter** (pd/pw/pm/py) based on information type
+
+#### Source Diversity Checklist
 - [ ] Searched in **multiple languages** (EN + user's language at minimum)
-- [ ] Used `brave_news_search` for recent developments
 - [ ] Extracted **at least 5-10 Reddit posts** with `mcp__reddit__fetch_reddit_post_content`
 - [ ] Explored **competing/alternative** products or viewpoints
 - [ ] Investigated **historical context** and origin stories
@@ -317,6 +545,16 @@ Before you start writing the report, verify you have completed:
 - [ ] **Ki section addresses Phase Zero findings** (if any terminology confusion or missing context was found)
 - [ ] **Ten section includes "Blind Spot Reveal"** (concepts user didn't ask about but needs to know)
 - [ ] **Ketsu includes "What You Might Have Missed"** summary (if applicable)
+
+### Refinement Mode Checklist (Only when refining an existing report)
+- [ ] **Read original report completely** before conducting any research
+- [ ] **Extracted all factual claims** from the original for verification
+- [ ] **Fact-checked 80%+ of original claims** against current sources
+- [ ] **Conducted 10+ new searches** beyond what the original already covers
+- [ ] **Identified gaps and blind spots** in the original report
+- [ ] **All new findings woven seamlessly** into existing narrative (no "New Findings" sections)
+- [ ] **Preserved original tone and voice** throughout edits
+- [ ] **No "upon further research" language** — reads as if always written this way
 
 **If any checkbox is unchecked, conduct additional searches before proceeding.**
 
@@ -336,6 +574,14 @@ Before you start writing the report, verify you have completed:
 | "Phase Zero isn't needed for this topic" | Feeling it's unnecessary is the trap. It's always needed. |
 | "English-only search is sufficient" | Different perspectives exist in different languages. You'll miss local context. |
 | "Need to start writing fast to meet deadline" | The more urgent, the deeper you go. Shallow writing = 100% rework. |
+| "The existing report is already good, just minor tweaks" | If it were good enough, the user wouldn't ask for refinement. Dig harder. |
+| "I'll add a 'New Findings' section at the end" | Appending = laziness. Weave into the existing narrative or you've failed. |
+| "I don't need to fact-check the original claims" | Unverified inherited claims are YOUR liability now. Verify everything. |
+| "brave_web_search is enough for everything" | **LAZY.** 5 tools exist for a reason. News needs `brave_news_search`. Locations need `brave_local_search`. |
+| "This topic doesn't need local search" | If ANY physical location, store, restaurant, or venue is mentioned → local search is needed. |
+| "Video search is overkill for this" | Tutorials, demos, and visual explanations often contain insights text sources miss. |
+| "I'll skip image search to save time" | Visual comparisons take 2 seconds and add immense value to the report. |
+| "Freshness filter isn't necessary" | Without freshness, you'll cite outdated information as current. News = `pw` minimum. |
 
 ---
 
@@ -349,8 +595,15 @@ Before you start writing the report, verify you have completed:
 - "Time-wise, I need to start writing fast" → The more urgent, the deeper you go. Shallow writing = rework.
 - "I already know this topic well, don't need many searches" → Confirmation bias activated.
 - "It's 12 searches not 15, but that's enough" → **Violating the letter means violating the spirit.**
+- "I'll just use brave_web_search for all queries" → **LAZY.** Wrong tool = incomplete picture.
+- "This topic doesn't involve locations" → Did you check? Any store, venue, or place mentioned?
+- "News search isn't relevant here" → If the topic has ANY recent developments, `brave_news_search` is mandatory.
+- "Video/image search won't add value" → You don't know until you search. 2 seconds to check.
+- "The existing report just needs minor updates" → If it only needed minor updates, the user wouldn't invoke deep-research. Treat it as a full research mandate.
+- "I'll just add a section at the bottom with new findings" → **Appending is not refining.** Weave seamlessly or fail.
+- "The original claims don't need re-verification" → Inherited claims are your responsibility. Verify them.
 
-**ALL of these = shortcut rationalization. STOP. Search more.**
+**ALL of these = shortcut rationalization. STOP. Search more. Use the right tool.**
 
 ---
 
