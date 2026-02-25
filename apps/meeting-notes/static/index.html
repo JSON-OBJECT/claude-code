@@ -1,0 +1,614 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Meeting Notes Generator</title>
+<style>
+  :root {
+    --bg: #0a0a0f;
+    --surface: #12121a;
+    --surface2: #1a1a26;
+    --border: #2a2a3a;
+    --text: #e0e0e8;
+    --text-dim: #8888a0;
+    --accent: #6c5ce7;
+    --accent-glow: #7c6cf7;
+    --success: #00d2a0;
+    --error: #ff6b6b;
+    --warning: #ffd93d;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+  }
+
+  header {
+    width: 100%;
+    padding: 2rem 0 1rem;
+    text-align: center;
+    border-bottom: 1px solid var(--border);
+    background: linear-gradient(180deg, #0f0f18 0%, var(--bg) 100%);
+  }
+
+  header h1 {
+    font-size: 1.8rem;
+    font-weight: 800;
+    letter-spacing: -0.03em;
+    background: linear-gradient(135deg, var(--accent-glow), #a29bfe, #fd79a8);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+
+  header p {
+    color: var(--text-dim);
+    font-size: 0.85rem;
+    margin-top: 0.4rem;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+  }
+
+  main {
+    width: 100%;
+    max-width: 720px;
+    padding: 2rem 1.5rem;
+    flex: 1;
+  }
+
+  .field {
+    margin-bottom: 1.5rem;
+  }
+
+  label {
+    display: block;
+    font-size: 0.75rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    color: var(--text-dim);
+    margin-bottom: 0.5rem;
+  }
+
+  input, textarea, select {
+    width: 100%;
+    padding: 0.75rem 1rem;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    background: var(--surface);
+    color: var(--text);
+    font-size: 0.95rem;
+    font-family: inherit;
+    transition: border-color 0.2s, box-shadow 0.2s;
+  }
+
+  input:focus, textarea:focus, select:focus {
+    outline: none;
+    border-color: var(--accent);
+    box-shadow: 0 0 0 3px rgba(108, 92, 231, 0.15);
+  }
+
+  textarea {
+    min-height: 200px;
+    resize: vertical;
+    line-height: 1.6;
+  }
+
+  .notion-row {
+    display: flex;
+    gap: 0.75rem;
+    align-items: flex-end;
+  }
+
+  .notion-row .field { flex: 1; margin-bottom: 0; }
+
+  .notion-row button {
+    padding: 0.75rem 1rem;
+    white-space: nowrap;
+    height: 44px;
+  }
+
+  .page-select { margin-top: 0.75rem; }
+
+  .page-select select {
+    background: var(--surface2);
+  }
+
+  button {
+    padding: 0.8rem 2rem;
+    border: none;
+    border-radius: 8px;
+    font-size: 0.9rem;
+    font-weight: 700;
+    cursor: pointer;
+    transition: all 0.2s;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+  }
+
+  .btn-primary {
+    background: linear-gradient(135deg, var(--accent), #a29bfe);
+    color: #fff;
+    width: 100%;
+    padding: 1rem;
+    font-size: 1rem;
+  }
+
+  .btn-primary:hover:not(:disabled) {
+    transform: translateY(-1px);
+    box-shadow: 0 4px 20px rgba(108, 92, 231, 0.4);
+  }
+
+  .btn-primary:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+    transform: none;
+  }
+
+  .btn-secondary {
+    background: var(--surface2);
+    color: var(--text-dim);
+    border: 1px solid var(--border);
+    font-size: 0.8rem;
+  }
+
+  .btn-secondary:hover {
+    background: var(--border);
+    color: var(--text);
+  }
+
+  /* Progress Area */
+  #progress {
+    margin-top: 2rem;
+    display: none;
+  }
+
+  #progress.active { display: block; }
+
+  .progress-bar {
+    width: 100%;
+    height: 3px;
+    background: var(--surface2);
+    border-radius: 2px;
+    overflow: hidden;
+    margin-bottom: 1rem;
+  }
+
+  .progress-bar .fill {
+    height: 100%;
+    background: linear-gradient(90deg, var(--accent), #a29bfe, var(--accent));
+    background-size: 200% 100%;
+    animation: shimmer 1.5s ease-in-out infinite;
+    width: 0%;
+    transition: width 0.5s;
+  }
+
+  @keyframes shimmer {
+    0% { background-position: 200% 0; }
+    100% { background-position: -200% 0; }
+  }
+
+  .log-entry {
+    display: flex;
+    align-items: flex-start;
+    gap: 0.6rem;
+    padding: 0.5rem 0;
+    font-size: 0.85rem;
+    color: var(--text-dim);
+    border-bottom: 1px solid rgba(42, 42, 58, 0.3);
+    animation: fadeIn 0.3s ease;
+  }
+
+  @keyframes fadeIn {
+    from { opacity: 0; transform: translateY(4px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  .log-entry .icon {
+    width: 18px;
+    height: 18px;
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.75rem;
+    margin-top: 1px;
+  }
+
+  .log-entry.searching .icon { color: var(--warning); }
+  .log-entry.fetching .icon { color: #74b9ff; }
+  .log-entry.composing .icon { color: var(--accent-glow); }
+  .log-entry.uploading .icon { color: var(--success); }
+  .log-entry.done .icon { color: var(--success); }
+  .log-entry.error .icon { color: var(--error); }
+
+  .log-entry .text {
+    flex: 1;
+    word-break: break-all;
+  }
+
+  /* Result Area */
+  #result {
+    margin-top: 1.5rem;
+    display: none;
+  }
+
+  #result.active { display: block; }
+
+  .result-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 1.5rem;
+  }
+
+  .result-card h3 {
+    font-size: 0.9rem;
+    font-weight: 700;
+    color: var(--success);
+    margin-bottom: 0.75rem;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+  }
+
+  .result-card a {
+    color: var(--accent-glow);
+    text-decoration: none;
+    font-weight: 600;
+    word-break: break-all;
+  }
+
+  .result-card a:hover {
+    text-decoration: underline;
+  }
+
+  .result-card .markdown-preview {
+    margin-top: 1rem;
+    padding-top: 1rem;
+    border-top: 1px solid var(--border);
+  }
+
+  .result-card .markdown-preview summary {
+    cursor: pointer;
+    color: var(--text-dim);
+    font-size: 0.8rem;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    font-weight: 600;
+  }
+
+  .result-card .markdown-preview pre {
+    margin-top: 0.75rem;
+    padding: 1rem;
+    background: var(--bg);
+    border-radius: 6px;
+    font-size: 0.8rem;
+    line-height: 1.5;
+    overflow-x: auto;
+    white-space: pre-wrap;
+    max-height: 400px;
+    overflow-y: auto;
+    color: var(--text-dim);
+  }
+
+  .error-card {
+    background: rgba(255, 107, 107, 0.08);
+    border: 1px solid rgba(255, 107, 107, 0.3);
+    border-radius: 12px;
+    padding: 1.5rem;
+    color: var(--error);
+  }
+
+  .char-count {
+    text-align: right;
+    font-size: 0.75rem;
+    color: var(--text-dim);
+    margin-top: 0.3rem;
+  }
+
+  .char-count.warn { color: var(--error); }
+
+  footer {
+    text-align: center;
+    padding: 1.5rem;
+    font-size: 0.7rem;
+    color: var(--text-dim);
+    border-top: 1px solid var(--border);
+    width: 100%;
+    letter-spacing: 0.05em;
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>Meeting Notes Generator</h1>
+  <p>AI-Powered Narrative Meeting Documentation</p>
+</header>
+
+<main>
+  <!-- Notion Target -->
+  <div class="field">
+    <label>Notion Parent Page</label>
+    <div class="notion-row">
+      <div class="field">
+        <input type="text" id="notionUrl" placeholder="Notion 페이지 URL 붙여넣기 또는 아래에서 검색..." />
+      </div>
+      <button class="btn-secondary" onclick="searchPages()">Search</button>
+    </div>
+    <div class="page-select" id="pageSelectWrap" style="display:none">
+      <select id="pageSelect" onchange="onPageSelect()">
+        <option value="">-- 페이지 선택 --</option>
+      </select>
+    </div>
+  </div>
+
+  <!-- Output Mode -->
+  <div class="field">
+    <label>Output Mode</label>
+    <select id="outputMode">
+      <option value="concise">Concise — 핵심 요약 (Haiku, ~$0.04)</option>
+      <option value="detailed">Detailed — 상세 미팅록 (Haiku, ~$0.06)</option>
+      <option value="sonnet">Sonnet — 고품질 미팅록 (Sonnet, ~$0.20)</option>
+    </select>
+  </div>
+
+  <!-- Meeting Text -->
+  <div class="field">
+    <label>Meeting Transcript / Notes</label>
+    <textarea id="meetingText" placeholder="회의 녹취록, NotebookLM 요약, 또는 수기 노트를 붙여넣으세요...&#10;&#10;배경 정보, 참석자, 날짜/시간 등을 함께 포함하면 더 좋은 결과가 나옵니다." oninput="updateCharCount()"></textarea>
+    <div class="char-count" id="charCount">0자</div>
+  </div>
+
+  <!-- Submit -->
+  <button class="btn-primary" id="submitBtn" onclick="submit()">Generate Meeting Notes</button>
+
+  <!-- Progress -->
+  <div id="progress">
+    <div class="progress-bar"><div class="fill" id="progressFill"></div></div>
+    <div id="logEntries"></div>
+  </div>
+
+  <!-- Result -->
+  <div id="result"></div>
+</main>
+
+<footer>
+  Meeting Notes Generator &mdash; Powered by Anthropic Claude + Brave Search + Notion API
+</footer>
+
+<script>
+const ICON_MAP = {
+  started: '&#9654;',
+  searching: '&#128269;',
+  fetching: '&#127760;',
+  composing: '&#9998;',
+  uploading: '&#9729;',
+  done: '&#10003;',
+  error: '&#10007;',
+};
+
+function updateCharCount() {
+  const text = document.getElementById('meetingText').value;
+  const el = document.getElementById('charCount');
+  el.textContent = text.length + '자';
+  el.className = text.length > 0 && text.length < 100 ? 'char-count warn' : 'char-count';
+}
+
+async function searchPages() {
+  const q = document.getElementById('notionUrl').value.trim();
+  try {
+    const resp = await fetch('/api/notion/pages?q=' + encodeURIComponent(q));
+    if (!resp.ok) throw new Error(await resp.text());
+    const data = await resp.json();
+    const select = document.getElementById('pageSelect');
+    select.innerHTML = '<option value="">-- 페이지 선택 --</option>';
+    for (const p of data.pages) {
+      const opt = document.createElement('option');
+      opt.value = p.url;
+      opt.textContent = (p.icon ? p.icon + ' ' : '') + p.title;
+      select.appendChild(opt);
+    }
+    document.getElementById('pageSelectWrap').style.display = 'block';
+  } catch (e) {
+    alert('페이지 검색 실패: ' + e.message);
+  }
+}
+
+function onPageSelect() {
+  const val = document.getElementById('pageSelect').value;
+  if (val) document.getElementById('notionUrl').value = val;
+}
+
+function addLog(type, text) {
+  const el = document.getElementById('logEntries');
+  const entry = document.createElement('div');
+  entry.className = 'log-entry ' + type;
+  entry.innerHTML = '<span class="icon">' + (ICON_MAP[type] || '') + '</span><span class="text">' + escapeHtml(text) + '</span>';
+  el.appendChild(entry);
+  el.scrollTop = el.scrollHeight;
+}
+
+function escapeHtml(s) {
+  const d = document.createElement('div');
+  d.textContent = s;
+  return d.innerHTML;
+}
+
+function setProgress(pct) {
+  document.getElementById('progressFill').style.width = pct + '%';
+}
+
+async function submit() {
+  const notionUrl = document.getElementById('notionUrl').value.trim();
+  const text = document.getElementById('meetingText').value.trim();
+
+  if (!notionUrl) return alert('Notion 페이지 URL을 입력하세요.');
+  if (text.length < 100) return alert('텍스트가 너무 짧습니다 (최소 100자).');
+
+  const btn = document.getElementById('submitBtn');
+  btn.disabled = true;
+  btn.textContent = 'Processing...';
+
+  const progress = document.getElementById('progress');
+  progress.className = 'active';
+  document.getElementById('logEntries').innerHTML = '';
+  document.getElementById('result').className = '';
+  document.getElementById('result').innerHTML = '';
+  setProgress(5);
+
+  addLog('started', '회의록 생성을 시작합니다...');
+
+  let searchCount = 0;
+
+  try {
+    const resp = await fetch('/api/process', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ notion_url: notionUrl, text: text, mode: document.getElementById('outputMode').value }),
+    });
+
+    if (!resp.ok) {
+      const errText = await resp.text();
+      throw new Error(errText);
+    }
+
+    const reader = resp.body.getReader();
+    const decoder = new TextDecoder();
+    let buffer = '';
+
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+
+      buffer += decoder.decode(value, { stream: true });
+      const lines = buffer.split('\n');
+      buffer = lines.pop() || '';
+
+      for (const line of lines) {
+        if (line.startsWith('event: ')) {
+          var currentEvent = line.slice(7).trim();
+        } else if (line.startsWith('data: ')) {
+          const data = line.slice(6);
+          handleSSE(currentEvent, data);
+        }
+      }
+    }
+
+    // Process remaining buffer
+    if (buffer.trim()) {
+      const lines = buffer.split('\n');
+      for (const line of lines) {
+        if (line.startsWith('event: ')) {
+          var currentEvent2 = line.slice(7).trim();
+        } else if (line.startsWith('data: ')) {
+          handleSSE(currentEvent2, line.slice(6));
+        }
+      }
+    }
+  } catch (e) {
+    addLog('error', '오류: ' + e.message);
+    showError(e.message);
+  } finally {
+    btn.disabled = false;
+    btn.textContent = 'Generate Meeting Notes';
+  }
+
+  function handleSSE(event, data) {
+    switch (event) {
+      case 'started':
+        setProgress(10);
+        break;
+      case 'searching':
+        searchCount++;
+        setProgress(Math.min(10 + searchCount * 3, 60));
+        addLog('searching', data);
+        break;
+      case 'fetching':
+        addLog('fetching', data);
+        break;
+      case 'composing':
+        setProgress(70);
+        addLog('composing', data || '회의록 작성 중...');
+        break;
+      case 'uploading':
+        setProgress(85);
+        addLog('uploading', data || '노션 업로드 중...');
+        break;
+      case 'done':
+        setProgress(100);
+        try {
+          const parsed = JSON.parse(data);
+          addLog('done', '완료!');
+          showResult(parsed.notion_url, parsed.markdown);
+        } catch {
+          addLog('done', data);
+        }
+        break;
+      case 'error':
+        try {
+          const parsed = JSON.parse(data);
+          addLog('error', parsed.message);
+          if (parsed.markdown) {
+            showError(parsed.message, parsed.markdown);
+          } else {
+            showError(parsed.message);
+          }
+        } catch {
+          addLog('error', data);
+          showError(data);
+        }
+        break;
+    }
+  }
+}
+
+function showResult(notionUrl, markdown) {
+  const el = document.getElementById('result');
+  el.className = 'active';
+  el.innerHTML = `
+    <div class="result-card">
+      <h3>Generation Complete</h3>
+      <p>Notion 페이지가 생성되었습니다:</p>
+      <p><a href="${escapeHtml(notionUrl)}" target="_blank">${escapeHtml(notionUrl)}</a></p>
+      <div class="markdown-preview">
+        <details>
+          <summary>생성된 마크다운 보기</summary>
+          <pre>${escapeHtml(markdown)}</pre>
+        </details>
+      </div>
+    </div>
+  `;
+}
+
+function showError(message, markdown) {
+  const el = document.getElementById('result');
+  el.className = 'active';
+  let html = `<div class="error-card"><strong>Error:</strong> ${escapeHtml(message)}</div>`;
+  if (markdown) {
+    html += `
+      <div class="result-card" style="margin-top:1rem">
+        <h3 style="color:var(--warning)">생성된 마크다운 (업로드 실패)</h3>
+        <div class="markdown-preview">
+          <details open>
+            <summary>마크다운 복사 가능</summary>
+            <pre>${escapeHtml(markdown)}</pre>
+          </details>
+        </div>
+      </div>
+    `;
+  }
+  el.innerHTML = html;
+}
+</script>
+
+</body>
+</html>
