@@ -1,7 +1,7 @@
 {
   "name": "deep-thinking",
-  "description": "Deep research, prompt forging, meeting notes, and trend analysis commands",
-  "version": "1.1.0",
+  "description": "Deep research, prompt forging, meeting notes, trend analysis, and local markdown grounding commands",
+  "version": "1.2.0",
   "author": {
     "name": "Taehyeong Lee",
     "email": "jsonobject@gmail.com"
@@ -17,6 +17,9 @@
     "translation",
     "korean-localization",
     "blog-cover",
-    "image-prompt"
+    "image-prompt",
+    "grounding",
+    "markdown-archive",
+    "citation"
   ]
 }

@@ -262,6 +262,24 @@ Generates image prompts for Gemini Nano Banana Pro with 6-phase visual storytell
 
 ---
 
+#### `/deep-thinking:ground {question}` — Markdown Archive Grounding
+> **No answer without local grounding — every claim cites `file:line`.**
+
+Executes a 5-stage pipeline (Discovery → Map → Pinpoint → Verify → Augment) over your local `.md` archive to produce cite-grade answers without burning context on cold file reads.
+
+| Feature | What It Does |
+|---------|--------------|
+| **5-Stage Pipeline** | Narrow → Map → Pinpoint → Verify → Augment — never reverse the order |
+| **Context Budget Optimizer** | `mq '.h2'` heading scan turns 2,000-line files into 10-line maps — avoids Lost-in-the-Middle |
+| **Multi-Language Discovery** | EN / KR / generic-name variants in Stage 1 — empirically expands 4→8 candidate files |
+| **Multi-File Cross-Synthesis** | Interpretive questions pull layers from 4+ files (philosophy + archetype + facts + record) |
+| **`file:line` Citations** | Every claim traceable — no line number, no claim |
+| **Absence Proof, Not Assumption** | Web augmentation (Stage 5) only after local absence is demonstrated |
+
+**Philosophy:** The curated `.md` corpus is ground truth. Web is a supplement for gaps only.
+
+---
+
 ### MCP Server Dependencies
 
 | Command | Required | Optional |
@@ -272,6 +290,7 @@ Generates image prompts for Gemini Nano Banana Pro with 6-phase visual storytell
 | `/deep-thinking:meeting-notes` | Time, Brave Search | Context7, Fetch |
 | `/deep-thinking:translate-kr` | Brave Search | - |
 | `/deep-thinking:blog-cover` | None | - |
+| `/deep-thinking:ground` | None | Brave Search, Reddit, Fetch (Stage 5 gap-filling only) |
 
 ## References
 

@@ -22,6 +22,7 @@ A Claude Code plugin for deep research, prompt engineering, trend analysis, and 
 | `/deep-thinking:meeting-notes {transcript}` | Transform meeting transcripts into narrative-driven documentation with counterparty research and verified terminology |
 | `/deep-thinking:translate-kr {article}` | Transcreate English IT articles into native Korean with terminology verification and anti-translation-artifact rules |
 | `/deep-thinking:blog-cover {title and concept}` | Generate anti-AI-looking blog cover image prompts for Gemini Nano Banana Pro with visual metaphors and title typography |
+| `/deep-thinking:ground {question}` | 5-stage pipeline (Discovery → Map → Pinpoint → Verify → Augment) that grounds answers in the local `.md` archive with mandatory `file:line` citations; web augmentation only for proven gaps |
 
 ## Usage Examples
 
@@ -43,6 +44,9 @@ A Claude Code plugin for deep research, prompt engineering, trend analysis, and 
 
 # Generate blog cover image prompt
 /deep-thinking:blog-cover "Why Microservices Fail" | "complexity debt accumulates faster than you think"
+
+# Ground an answer in your local markdown archive
+/deep-thinking:ground What does my archive say about microservices failure modes?
 ```
 
 ## Requirements
@@ -59,6 +63,7 @@ A Claude Code plugin for deep research, prompt engineering, trend analysis, and 
 | `/deep-thinking:meeting-notes` | Time, Brave Search | Context7, Fetch |
 | `/deep-thinking:translate-kr` | Brave Search | - |
 | `/deep-thinking:blog-cover` | None | - |
+| `/deep-thinking:ground` | None | Brave Search, Reddit, Fetch (Stage 5 gap-filling only) |
 
 ### Quick MCP Setup
 
