@@ -12,6 +12,20 @@ A Claude Code plugin for deep research, prompt engineering, trend analysis, and 
 /plugin install deep-thinking@jsonobject-marketplace
 ```
 
+## Update
+
+Apply a new plugin version to the current Claude Code session without a restart:
+
+```bash
+# 1. Pull latest marketplace metadata and cache the new plugin source
+/plugin marketplace update jsonobject-marketplace
+
+# 2. Hot-reload the active session
+/reload-plugins
+```
+
+With `autoUpdate: true` on the marketplace (default), refresh also happens automatically at Claude Code launch.
+
 ## Commands
 
 | Command | Description |

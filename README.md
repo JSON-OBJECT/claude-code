@@ -161,6 +161,20 @@ This repository is a **Claude Code Plugin Marketplace** containing the `deep-thi
 # Restart Claude Code to load the plugin
 ```
 
+### Update
+
+When a new plugin version is published (e.g. `1.1.0 → 1.2.0`), apply it to the current Claude Code session without a restart:
+
+```bash
+# 1. Pull latest marketplace metadata and cache the new plugin source
+/plugin marketplace update jsonobject-marketplace
+
+# 2. Hot-reload the active session so new commands/skills/agents become available
+/reload-plugins
+```
+
+With `autoUpdate: true` on the marketplace (default), Claude Code also refreshes it automatically on launch — the two commands above just apply the update immediately instead of waiting for the next start.
+
 ### Commands
 
 #### `/deep-thinking:pulse {topic}` — Trend Radar
