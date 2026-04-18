@@ -306,6 +306,31 @@ Executes a 5-stage pipeline (Discovery → Map → Pinpoint → Verify → Augme
 | `/deep-thinking:blog-cover` | None | - |
 | `/deep-thinking:ground` | None | Brave Search, Reddit, Fetch (Stage 5 gap-filling only) |
 
+### Setup for `/deep-thinking:ground`
+
+The 5-stage pipeline leans on modern shell CLIs for Stages 1–4 and reuses the globally-installed MCP servers for optional Stage 5 web augmentation.
+
+**CLI tools — one-shot Homebrew install:**
+
+```bash
+brew install fd ripgrep bat sd fzf scc tokei yq glow lychee && \
+brew install harehare/tap/mq
+```
+
+| Tool | Role in the 5-stage pipeline |
+|------|------------------------------|
+| `fd` | Stage 1 — filename/path match (replaces `find`) |
+| `rg` (ripgrep) | Stage 1 content scan; Stage 3 `-C 5` context extraction with line numbers |
+| `mq` | **Stage 2 — Markdown AST heading extraction (`mq '.h2' file.md`).** Zero false positives on `##` inside code blocks (40% error rate vs `rg '^##'` empirically) |
+| `yq` | Stage 1 — YAML frontmatter field filtering (`yq --front-matter=extract '.tags[]'`) |
+| `glow` | Stage 4 — terminal Markdown render for visual verification of tables, links, heading structure |
+| `lychee` | Archive maintenance — async link validator (`lychee "**/*.md"`) to catch citation rot |
+| `bat`, `sd`, `fzf`, `scc`, `tokei` | General modern-CLI layer invoked by Stage 0 tool awareness (readable cat, sed replacement, fuzzy finder, code counters) |
+
+**MCP servers — Stage 5 (optional, for web gap-filling only):**
+
+No ground-specific MCP server. The optional three (Brave Search, Reddit, Fetch) are already covered in the [MCP Servers Installation](#mcp-servers-installation) section above — install only if your local archive leaves gaps that need web augmentation.
+
 ## References
 
 - [Claude Code Documentation](https://docs.anthropic.com/en/docs/claude-code/overview)

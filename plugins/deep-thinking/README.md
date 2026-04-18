@@ -98,6 +98,27 @@ claude mcp add context7 -s user -- npx -y @upstash/context7-mcp
 claude mcp add fetch -s user -- uvx mcp-server-fetch
 ```
 
+### CLI Tools for `/deep-thinking:ground`
+
+The 5-stage pipeline relies on modern shell CLIs. One-shot Homebrew install:
+
+```bash
+brew install fd ripgrep bat sd fzf scc tokei yq glow lychee && \
+brew install harehare/tap/mq
+```
+
+| Tool | Role |
+|------|------|
+| `fd` | Stage 1 filename match |
+| `rg` (ripgrep) | Stage 1 content scan; Stage 3 `-C 5` context extraction |
+| `mq` | **Stage 2 Markdown AST heading extraction — critical.** Zero false positives on `##` inside code blocks |
+| `yq` | Stage 1 YAML frontmatter filtering |
+| `glow` | Stage 4 render verification |
+| `lychee` | Archive-wide link validator |
+| `bat`, `sd`, `fzf`, `scc`, `tokei` | General modern-CLI layer referenced by Stage 0 tool awareness |
+
+The optional Stage 5 MCP servers (Brave Search, Reddit, Fetch) are already covered in **Quick MCP Setup** above — no ground-specific MCP is required.
+
 ## License
 
 MIT
