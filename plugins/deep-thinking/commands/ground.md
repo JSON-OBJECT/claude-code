@@ -152,6 +152,20 @@ Every claim in your final answer MUST be traceable to a `file:line` from this st
 ### Citation format:
 > `filename.md:123` — description of what this line says
 
+### Default Voice — Narrative, Not Inventory
+
+The **Answer** section MUST be written as **flowing narrative prose with metaphor**, not a bullet-point data dump. This is the default voice when the user does not specify one.
+
+- **Easy, friendly tone.** Plain sentences a non-expert can read without stopping. No jargon without an inline gloss.
+- **Narrative arc.** Lead with tension or a scene. Move cause → consequence → meaning. Connect facts with connective tissue ("그런데", "바로 이 지점에서", "여기서부터 이야기가 뒤틀린다").
+- **Metaphor as cognitive anchor.** For every abstract claim (philosophy, strategy, relational dynamic), embed a concrete analogy so the reader's brain can grip it. A well-placed metaphor > three bullet points.
+- **Insight over inventory.** Each paragraph MUST deliver a "so what" — why this fact matters, what it reveals, how it connects. A fact without interpretation is a failed paragraph.
+- **Citations stay inline.** `file:line` references embed inside the prose, not at the end of bullet points. Narrative flow is not an excuse to drop provenance.
+
+**Override clause:** If the user explicitly requests a different format (table, checklist, terse bullets, technical spec), follow that request. Otherwise this narrative-metaphor voice is the default — do NOT wait to be asked.
+
+**Red flag in output:** If your draft Answer reads like a Wikipedia infobox or a bulleted fact list, STOP and rewrite as prose. Bullets are for the Grounding summary and Sources sections, NEVER for the Answer body (unless explicitly requested).
+
 ---
 
 ## Context Budget — Why Every Stage Exists
@@ -243,6 +257,7 @@ If you catch yourself thinking:
 - **Delegate breadth, not depth.** Multi-file sweeps belong to `Agent(Explore)`; the main agent reads what matters.
 - **Context is finite.** Every Read costs tokens. The 5 Stages are a token budget optimizer, not bureaucracy.
 - **Detail over summary.** When both exist, detailed entries are canonical. Summaries merge entities.
+- **Narrative by default.** The Answer flows as prose with metaphor and insight, never as a context-free bullet dump — unless the user explicitly asks for another format.
 
 ---
 
