@@ -151,6 +151,7 @@ BEFORE proposing any edits to the original file:
 NO REPORT WITHOUT 15+ SEARCHES AND PHASE ZERO FIRST.
 NO RESEARCH WITHOUT SUB-AGENT DELEGATION.
 NO REFINEMENT WITHOUT FACT-CHECKING FIRST AND SEAMLESS INTEGRATION.
+NO OUTPUT FILE WITHOUT THE PROVENANCE FRONTMATTER CONTRACT.
 "The moment you feel you've done enough is the most dangerous moment."
 ```
 
@@ -596,6 +597,83 @@ Your report MUST feel like:
 
 ---
 
+## Default Output Location — Original Mode
+
+Unless `$ARGUMENTS` already specifies a path, **silently save** the report to `{category}/{topic-slug}-deep-research.md` relative to `cwd`. Never ask where to save; never dump at the repo root.
+
+- `{category}` — pick the most appropriate **existing** top-level directory in `cwd` for the topic's domain. If nothing fits, create a new sibling directory named with a singular kebab-case domain noun.
+- `{topic-slug}` — 3–6 kebab-case words capturing the core topic. No date, no model name, no `report` suffix.
+
+Refinement Mode overrides this rule: write back to the existing file path.
+
+---
+
+## Frontmatter Contract — MANDATORY for Every Output File
+
+```
+EVERY report file written by this command MUST begin with the provenance frontmatter block.
+This is the producer side of the /ground Stage 4 gate.
+Without it, the cognitive-debt safeguard cannot function and agent output silently
+re-enters the corpus as if it were a primary source.
+```
+
+### The Required Block
+
+The very first lines of every output `.md` file MUST be a YAML frontmatter block in this exact shape:
+
+```yaml
+---
+generated_by: claude-opus-4-7
+human_reviewed: false
+generated_at: 2026-04-27
+research_searches: 23
+sub_agents_dispatched: 4
+tags: [topic-tag-1, topic-tag-2, topic-tag-3]
+aliases: []
+---
+```
+
+The block follows Obsidian frontmatter conventions — `tags` and `aliases` are read by Obsidian for graph/search; the provenance fields are read by `/ground` Stage 4. Both coexist in one block.
+
+**Field rules:**
+
+| Field | Value | How to obtain |
+|-------|-------|---------------|
+| `generated_by` | Exact model ID currently executing (e.g., `claude-opus-4-7`, `claude-sonnet-4-6`, `claude-haiku-4-5`) | Read from system context — never guess or omit |
+| `human_reviewed` | `false` — always, at generation time | The agent NEVER flips this to `true`. Only a human does, after reading. |
+| `generated_at` | Today's date as `YYYY-MM-DD` | From `mcp__time__get_current_time` — real time, never approximate |
+| `research_searches` | Total searches performed across all sub-agents | Aggregate the count from sub-agent return reports |
+| `sub_agents_dispatched` | Number of parallel sub-agents launched | Count of Agent tool calls made during this run |
+| `tags` | 3–5 kebab-case tags spanning topic + domain + report type (e.g., `[deep-research, llm-wiki, obsidian]`) | Derive from topic and category folder; powers Obsidian graph/search |
+| `aliases` | Alternate titles for Obsidian wikilink resolution (e.g., shortened name, English↔Korean variant). `[]` when none | Optional but the key MUST be present |
+
+### Why This Exists
+
+The `/ground` command's Stage 4 frontmatter gate refuses to cite files where `human_reviewed: false` as primary evidence. Without this contract, every deep-research output silently bypasses that safeguard. Future runs of `/ground` would treat unreviewed agent synthesis as ground truth, and each subsequent answer compounds prior unverified claims into a closed loop. The contract makes the synthesis status legible to downstream tools — and to future-you.
+
+### Refinement Mode Interaction
+
+When this command runs in Refinement Mode on an existing file, the frontmatter must be reconciled, not discarded:
+
+1. **File has no frontmatter:** prepend the full block above as part of the refinement edit.
+2. **File has `human_reviewed: true`:** RESET it to `false`. Refinement injects new agent-generated claims into a previously-approved document — those new claims have not been read by a human, so the file as a whole is no longer fully reviewed. Add a `last_refined_at: YYYY-MM-DD` field alongside.
+3. **File has `human_reviewed: false`:** keep it `false`. Add `last_refined_at: YYYY-MM-DD`. Update `research_searches` and `sub_agents_dispatched` to reflect cumulative effort across original generation and this refinement pass.
+
+**No exceptions:**
+- Do not set `human_reviewed: true` because "the refinement was minor."
+- Do not omit the block because "the file is for personal use only."
+- Do not invent the `generated_by` value — read it from the actual system context.
+- Do not preserve `human_reviewed: true` across a refinement pass — new content invalidates the prior review.
+
+### Red Flags
+
+- "The user is the only reader, frontmatter is overkill." → `/ground` depends on the block. Always include.
+- "I verified my own claims thoroughly, I can mark `human_reviewed: true`." → Self-verification by the agent is NOT human review. The whole point of the gate is to distinguish the two. Never flip the flag.
+- "Refinement preserves the original review status because the user already approved this file." → New synthesis = new unreviewed surface. Reset to `false`.
+- "I'll put the metadata in prose at the bottom of the report." → Stage 4 reads YAML frontmatter, not prose. Prose metadata cannot be queried by `yq`.
+
+---
+
 ## The Gate Function — MANDATORY Before Writing
 
 ```
@@ -621,6 +699,9 @@ BEFORE writing the report:
 
 7. CONFIRM: All checklist items below are checked?
    → If any unchecked: STOP. Complete before writing.
+
+8. FRONTMATTER: Have you prepared the provenance block (generated_by, human_reviewed: false, generated_at, research_searches, sub_agents_dispatched)?
+   → If missing: STOP. /ground Stage 4 cannot gate this file without it. Refinement Mode: did you reset human_reviewed to false?
 
 Starting to write before completing the checklist = lying to yourself, not efficiency.
 ```
@@ -689,6 +770,15 @@ Before you start writing the report, verify you have completed:
 - [ ] **Ten section includes "Blind Spot Reveal"** (concepts user didn't ask about but needs to know)
 - [ ] **Ketsu includes "What You Might Have Missed"** summary (if applicable)
 
+### Frontmatter Contract Checklist
+- [ ] **Provenance block is the very first content** of the output file (no blank lines or prose before it)
+- [ ] **`generated_by`** holds the actual current model ID (not a placeholder, not a guess)
+- [ ] **`human_reviewed: false`** — agent NEVER sets this to `true`
+- [ ] **`generated_at`** uses today's date from `mcp__time__get_current_time` (not a hallucinated date)
+- [ ] **`research_searches`** reflects the real total across all sub-agents
+- [ ] **`sub_agents_dispatched`** matches the actual count of Agent tool calls
+- [ ] **Refinement Mode only:** if the original file had `human_reviewed: true`, it has been RESET to `false` and `last_refined_at` was added
+
 ### Refinement Mode Checklist (Only when refining an existing report)
 - [ ] **Read original report completely** before conducting any research
 - [ ] **Extracted all factual claims** from the original for verification
@@ -733,6 +823,10 @@ Before you start writing the report, verify you have completed:
 | "Social media scraping via Apify is too complex" | 4 tool calls: search-actors → fetch-details → call-actor → get-output. Not complex. Laziness. |
 | "Sub-agents are overkill, I'll search directly" | Direct search = context compaction = degraded report. Sub-agents are the architecture, not an option. |
 | "Dispatching sub-agents is slower than searching myself" | Sub-agents run in parallel. 5 agents × 5 searches each = 25 searches in the time of 5. Faster AND context-safe. |
+| "I'll skip the frontmatter, the report has the date in prose anyway" | /ground Stage 4 reads YAML frontmatter, not prose. Skipping = silently bypassing the cognitive-debt gate. Always include the block. |
+| "I verified my own claims, so human_reviewed: true is fair" | Self-verification by the agent is NOT human review. The agent CANNOT mark its own output as reviewed. Only the user, after reading, may flip the flag. |
+| "Refinement was minor, the user's prior approval should carry over" | New synthesis = new unreviewed surface. Reset human_reviewed to false. The user must re-read before re-approving. |
+| "I don't know the model ID, I'll just put 'claude'" | The exact ID matters — `/ground` may filter or weight by model. Read the actual system context. Never guess. |
 
 ---
 
