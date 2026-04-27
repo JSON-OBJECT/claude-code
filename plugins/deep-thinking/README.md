@@ -100,10 +100,10 @@ claude mcp add fetch -s user -- uvx mcp-server-fetch
 
 ### CLI Tools for `/deep-thinking:ground`
 
-The 5-stage pipeline relies on modern shell CLIs. One-shot Homebrew install:
+The 5-stage pipeline relies on modern shell CLIs, plus SQLite (FTS5-enabled) and Python 3 for the BM25 index that ranks Stage 1 candidates. One-shot Homebrew install:
 
 ```bash
-brew install fd ripgrep bat sd fzf scc tokei yq glow lychee && \
+brew install fd ripgrep bat sd fzf scc tokei yq glow lychee sqlite python && \
 brew install harehare/tap/mq
 ```
 
@@ -115,7 +115,26 @@ brew install harehare/tap/mq
 | `yq` | Stage 1 YAML frontmatter filtering |
 | `glow` | Stage 4 render verification |
 | `lychee` | Archive-wide link validator |
+| `sqlite` | **Stage 1 BM25 ranking via `vault.fts5.db`** — FTS5-enabled SQLite CLI; biggest context-budget saver when the index exists |
+| `python` | Runs `fts5-reindex.py` at the vault root to (re)build `vault.fts5.db` with the trigram tokenizer (~3s for 200 files) |
 | `bat`, `sd`, `fzf`, `scc`, `tokei` | General modern-CLI layer referenced by Stage 0 tool awareness |
+
+> Homebrew's `sqlite` ships with FTS5 compiled in, unlike some system-shipped builds. After install, ensure `$(brew --prefix)/opt/sqlite/bin` is on your `PATH` so `sqlite3` resolves to the FTS5-capable binary rather than the OS default.
+
+#### Optional but Recommended — Build the FTS5 Index
+
+The `/deep-thinking:ground` pipeline runs without an index (Stage 1 falls back to `rg`/`Grep`), but the FTS5 index unlocks **BM25-ranked candidate selection** — the single biggest context-budget saver across the 5 stages, especially for CJK substring matching via the trigram tokenizer. Drop `fts5-reindex.py` into the markdown directory you want to ground against (it auto-detects its own parent as the vault root) and run it once:
+
+```bash
+# 1. Copy the script into the LLM Wiki / markdown archive root
+cp ~/.claude/plugins/marketplaces/jsonobject-marketplace/fts5-reindex.py /path/to/your/llm-wiki/
+
+# 2. Build vault.fts5.db at that root (~3s for ~200 files)
+cd /path/to/your/llm-wiki
+python3 fts5-reindex.py
+```
+
+Re-run after major edits to refresh the index. If `vault.fts5.db` is absent or stale, Stage 1 transparently falls back to `rg`/`Grep` — the index is purely an acceleration layer.
 
 The optional Stage 5 MCP servers (Brave Search, Reddit, Fetch) are already covered in **Quick MCP Setup** above — no ground-specific MCP is required.
 

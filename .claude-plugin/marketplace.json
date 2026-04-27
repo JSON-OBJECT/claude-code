@@ -1,7 +1,7 @@
 {
   "$schema": "https://anthropic.com/claude-code/marketplace.schema.json",
   "name": "jsonobject-marketplace",
-  "version": "1.2.1",
+  "version": "1.2.2",
   "description": "Personal Claude Code plugin marketplace by JSON-OBJECT",
   "owner": {
     "name": "Taehyeong Lee",
@@ -15,7 +15,7 @@
       "name": "deep-thinking",
       "description": "Advanced slash commands for deep research, prompt engineering, trend analysis, meeting documentation, and local markdown grounding",
       "source": "./plugins/deep-thinking",
-      "version": "1.2.1",
+      "version": "1.2.2",
       "category": "productivity",
       "keywords": [
         "research",
