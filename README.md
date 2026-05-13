@@ -276,6 +276,23 @@ Generates image prompts for Gemini Nano Banana Pro with 6-phase visual storytell
 
 ---
 
+#### `/deep-thinking:blog {topic or draft}` — IT Tech Blog Writer
+> **Fact-based blog posts that cite every claim.**
+
+A 16-year veteran blogger framework that produces source-cited IT tech articles with mandatory bullet point formatting and inline hyperlinks.
+
+| Feature | What It Does |
+|---------|--------------|
+| **Phase Zero Validation** | Time context, terminology check, version sanity, alternative angles — before any drafting |
+| **4-Tier Source Hierarchy** | Official docs → primary research → reputable secondary → user-generated (Reddit/HN) — each cited inline with its tier label |
+| **Mandatory Bullet Formatting** | No wall-of-text — structured bullet hierarchies optimized for scan reading |
+| **Inline Hyperlinks + Quote Format** | `[[Reddit]](url)` for facts, blockquote with `— u/user, r/sub [[Link]]` for direct quotes |
+| **Community Sentiment Required** | Reddit + HN coverage is REQUIRED, not optional — unfiltered user experience over press releases |
+
+**Anti-pattern:** Unsourced opinion essays. This produces journalism-grade tech writing where every claim is traceable.
+
+---
+
 #### `/deep-thinking:ground {question}` — Markdown Archive Grounding
 > **No answer without local grounding — every claim cites `file:line`.**
 
@@ -304,6 +321,7 @@ Executes a 5-stage pipeline (Discovery → Map → Pinpoint → Verify → Augme
 | `/deep-thinking:meeting-notes` | Time, Brave Search | Context7, Fetch |
 | `/deep-thinking:translate-kr` | Brave Search | - |
 | `/deep-thinking:blog-cover` | None | - |
+| `/deep-thinking:blog` | Time, Brave Search, Reddit | Fetch, Context7 |
 | `/deep-thinking:ground` | None | Brave Search, Reddit, Fetch (Stage 5 gap-filling only) |
 
 ### Setup for `/deep-thinking:ground`
