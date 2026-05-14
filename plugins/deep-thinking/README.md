@@ -38,6 +38,7 @@ With `autoUpdate: true` on the marketplace (default), refresh also happens autom
 | `/deep-thinking:blog-cover {title and concept}` | Generate anti-AI-looking blog cover image prompts for Gemini Nano Banana Pro with visual metaphors and title typography |
 | `/deep-thinking:blog {topic or draft}` | 16-year veteran IT tech blogger framework — fact-based, source-cited content with mandatory bullet point formatting and inline hyperlinks |
 | `/deep-thinking:ground {question}` | 5-stage pipeline (Discovery → Map → Pinpoint → Verify → Augment) that grounds answers in the local `.md` archive with mandatory `file:line` citations; web augmentation only for proven gaps |
+| `/deep-thinking:writing-z-image-turbo-prompts {seed}` | Forge a Z-Image-Turbo (ZIT) photorealism prompt from any natural-language seed — outputs an sd-dynamic-prompts mustache template implementing the 90hex 11-slot doctrine (camera body + film stock + anti-AI 4-stack) |
 
 ## Usage Examples
 
@@ -65,6 +66,9 @@ With `autoUpdate: true` on the marketplace (default), refresh also happens autom
 
 # Ground an answer in your local markdown archive
 /deep-thinking:ground What does my archive say about microservices failure modes?
+
+# Forge a Z-Image-Turbo photorealism prompt
+/deep-thinking:writing-z-image-turbo-prompts 30s woman in a rainy Seoul alley
 ```
 
 ## Requirements
@@ -83,6 +87,7 @@ With `autoUpdate: true` on the marketplace (default), refresh also happens autom
 | `/deep-thinking:blog-cover` | None | - |
 | `/deep-thinking:blog` | Time, Brave Search, Reddit | Fetch, Context7 |
 | `/deep-thinking:ground` | None | Brave Search, Reddit, Fetch (Stage 5 gap-filling only) |
+| `/deep-thinking:writing-z-image-turbo-prompts` | None | - |
 
 ### Quick MCP Setup
 

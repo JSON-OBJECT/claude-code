@@ -311,6 +311,23 @@ Executes a 5-stage pipeline (Discovery → Map → Pinpoint → Verify → Augme
 
 ---
 
+#### `/deep-thinking:writing-z-image-turbo-prompts {seed}` — ZIT Photorealism Forger
+> **90hex's discovery, operationalized — exit the beauty-stock prior with one camera body, one film stock, and an anti-AI 4-stack.**
+
+Transforms any natural-language seed (any language, any length) into an `sd-dynamic-prompts` mustache template (300–450 words of template surface, expanding to a 200–400 word resolved prompt per roll) for Z-Image-Turbo, plus the exact Forge Neo / ComfyUI settings.
+
+| Feature | What It Does |
+|---------|--------------|
+| **Iron Law: 90hex Triple** | Every output locks in (1) one real camera body + (2) one real film stock or lighting keyword + (3) anti-AI 4-stack — no exceptions |
+| **11-Slot Doctrine** | Identity slots fixed plaintext; environment slots `{a\|b\|c}` mustache wildcards — variation without identity drift |
+| **Anti-AI Armor** | Negative prompts, "average" alone, "cinematic lighting", tag-soup, and meta-tags are forbidden by construction |
+| **Mustache Template Output** | Never a single frozen prompt — always a dynamic template that yields fresh resolved prompts per roll |
+| **Runner Settings Included** | Forge Neo / ComfyUI sampler, CFG, steps, and resolution baked into the output |
+
+**Philosophy:** ZIT's training prior is beauty stock photography. The only exit is naming a real camera body, a real film stock, and stacking anti-AI anchors. Violating the letter of the rule violates the spirit of ZIT photorealism.
+
+---
+
 ### MCP Server Dependencies
 
 | Command | Required | Optional |
@@ -323,6 +340,7 @@ Executes a 5-stage pipeline (Discovery → Map → Pinpoint → Verify → Augme
 | `/deep-thinking:blog-cover` | None | - |
 | `/deep-thinking:blog` | Time, Brave Search, Reddit | Fetch, Context7 |
 | `/deep-thinking:ground` | None | Brave Search, Reddit, Fetch (Stage 5 gap-filling only) |
+| `/deep-thinking:writing-z-image-turbo-prompts` | None | - |
 
 ### Setup for `/deep-thinking:ground`
 
