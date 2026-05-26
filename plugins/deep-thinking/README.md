@@ -39,6 +39,7 @@ With `autoUpdate: true` on the marketplace (default), refresh also happens autom
 | `/deep-thinking:blog {topic or draft}` | 16-year veteran IT tech blogger framework — fact-based, source-cited content with mandatory bullet point formatting and inline hyperlinks |
 | `/deep-thinking:ground {question}` | 5-stage pipeline (Discovery → Map → Pinpoint → Verify → Augment) that grounds answers in the local `.md` archive with mandatory `file:line` citations; web augmentation only for proven gaps |
 | `/deep-thinking:writing-z-image-turbo-prompts {seed}` | Forge a Z-Image-Turbo (ZIT) photorealism prompt from any natural-language seed — outputs an sd-dynamic-prompts mustache template implementing the 90hex 11-slot doctrine (camera body + film stock + anti-AI 4-stack) |
+| `/deep-thinking:hidden-reality {idea or topic}` | Anti-optimization idea forge — suggests, verifies, or defends "Hidden Reality" software ideas against an 11-mechanism doctrine (imperfection, friction, anti-utility, defamiliarization, scale violation, etc.) with academic backbone (Tega Brain, 한병철, Shklovsky, Dunne & Raby) and a 2-week prototype scope |
 
 ## Usage Examples
 
@@ -69,6 +70,9 @@ With `autoUpdate: true` on the marketplace (default), refresh also happens autom
 
 # Forge a Z-Image-Turbo photorealism prompt
 /deep-thinking:writing-z-image-turbo-prompts 30s woman in a rainy Seoul alley
+
+# Forge or verify a Hidden Reality (anti-optimization) software idea
+/deep-thinking:hidden-reality calendar app that deliberately wastes AI on aesthetic shock
 ```
 
 ## Requirements
@@ -88,6 +92,7 @@ With `autoUpdate: true` on the marketplace (default), refresh also happens autom
 | `/deep-thinking:blog` | Time, Brave Search, Reddit | Fetch, Context7 |
 | `/deep-thinking:ground` | None | Brave Search, Reddit, Fetch (Stage 5 gap-filling only) |
 | `/deep-thinking:writing-z-image-turbo-prompts` | None | - |
+| `/deep-thinking:hidden-reality` | None | Brave Search (SCOUT mode for live 2025–2026 artifacts) |
 
 ### Quick MCP Setup
 

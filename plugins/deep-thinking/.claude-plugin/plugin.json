@@ -1,7 +1,7 @@
 {
   "name": "deep-thinking",
-  "description": "Deep research, prompt forging, meeting notes, trend analysis, blog writing, and local markdown grounding commands",
-  "version": "1.5.0",
+  "description": "Deep research, prompt forging, meeting notes, trend analysis, blog writing, local markdown grounding, and Hidden Reality anti-optimization idea forging commands",
+  "version": "1.6.0",
   "author": {
     "name": "Taehyeong Lee",
     "email": "jsonobject@gmail.com"
@@ -23,6 +23,9 @@
     "photorealism",
     "grounding",
     "markdown-archive",
-    "citation"
+    "citation",
+    "hidden-reality",
+    "anti-optimization",
+    "speculative-design"
   ]
 }
