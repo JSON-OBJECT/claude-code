@@ -273,6 +273,8 @@ After the block, append ONE line inviting the user to override any slot — e.g.
 
 > **Settings are build-dependent — surface, don't assert.** The numbers in the SETTINGS block reflect common Forge Neo / ComfyUI ZIT workflows, but several vary by build and node graph and are NOT universal: **Steps** (community default is 9; range 6–10), **Scheduler** (`simple` and `sgm_uniform` are the most-cited pairings with Euler; `Beta` also works), **Clip skip** (ZIT uses a Qwen LLM text encoder, not CLIP, so clip-skip is largely inert — most workflows leave it at 1), **Sampling Shift**, and any **distilled-guidance / "Distilled CFG" knob** (some ZIT infotext shows ~3.5; other sources say Turbo needs none). Only **CFG = 1.0** is invariant. Tell the user to confirm these against their own working ZIT workflow rather than treating the block as canonical.
 
+> **Low-VRAM reference (≤10GB) — verified on one build, NOT a recommended default.** On a 10GB card (e.g. RTX 3080 10GB) the whole stack can run quantized: an fp8 checkpoint (a realism fine-tune such as `moody-real` fp8 works, though it departs from the base-model prior this doctrine assumes), a GGUF-quantized ZIT text encoder (e.g. `Qwen3-4B Z-Image-Engineer Q6_K` — sharpens prompt adherence), the stock `ae.safetensors` VAE, and `float8-e4m3fn` "Diffusion in low bits". Offered ONLY as a Forge Neo reference for ≤10GB GPUs — pick the actual checkpoint / encoder / VAE to fit your own VRAM and taste; these specific files are one person's build, not an endorsement. Non-obvious gotcha: in Forge Neo "Diffusion in low bits" must be ON (Automatic / fp16) or LoRAs silently fail to load (r/SD 1pfs9iz).
+
 ---
 
 ## Worked Example — the 90hex prototype, mustache-fied
