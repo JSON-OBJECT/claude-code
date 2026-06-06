@@ -231,11 +231,11 @@ NEGATIVE PROMPT: (leave empty — CFG=1 makes it mathematically void)
 SETTINGS (Forge Neo / ComfyUI):
 • Sampler           : Euler  (or DPM++ 2S a RF for master-cut, ~1.6× slower)
 • Scheduler         : Beta (beta_alpha=0.6, beta_beta=0.6)  — or simple
-• Steps             : 8
+• Steps             : 9
 • CFG               : 1.0   ← absolute, never raise
-• Sampling Shift    : 6 (1024px) / 7+ (1440px+)
+• Sampling Shift    : 7 (832×1216 base) / 8+ (1440px+)
 • Resolution        : [pick: 832×1216 portrait / 1024×1024 square / 1216×832 landscape]
-• Clip skip         : 2
+• Clip skip         : 1   ← ZIT uses a Qwen encoder; clip-skip is inert, leave at 1
 • RNG               : CPU
 • Batch count       : 32   ← lookbook minimum to surface mustache variety
 • Batch size        : 1    ← never raise; sd-dynamic-prompts issue #544 batch-share trap
@@ -246,17 +246,18 @@ DYNAMIC PROMPTS:
 
 HIRES.FIX (recommended, never skip for skin):
 • Upscaler          : 4xNomos8k_atd_jpg  (or 4x-Nomos8khat for people, 4x_NMKD-Siax_200k for skin)
-• Hires steps       : 6
-• Denoise           : 0.22   ← never above 0.30 ("hardened skin" hallucination)
+• Hires steps       : 8
+• Denoise           : 0.18   ← 0.18–0.22 range (0.18 verified sweet spot); never above 0.30 ("hardened skin"/"elephant-hide" crust)
 • Upscale by        : 1.5×   ← latent upscale >1.5× breaks consistency; always use 4x-model upscaler
 • Hires sampler     : same as base (Euler/Beta) — NEVER swap, causes "doll skin"
 • Order             : Hires.fix → ADetailer (Forge Neo default)
 
-ADETAILER (recommended):
-• Model 1: face_yolov8n.pt — denoise 0.4, mask blur 8, inpaint res 1024
-• Model 2: person_yolov8n-seg.pt — denoise 1.0, mask blur 10
+ADETAILER (recommended — face-only by default):
+• Model 1: face_yolov8n.pt — denoise 0.35, mask blur 8, inpaint res 1024; "Restore faces" OFF
+• "Use separate steps / CFG" : OFF — else ADetailer re-runs at its own stored values (often 28-step / CFG 7) and overcooks the skin
+• ⛔ person_yolov8n-seg.pt at denoise 1.0 re-renders the whole body → "elephant-hide" crust AND re-crops the full-body framing. Leave it OFF (drop to ~0.2 only if you truly need it); pose-lock with ControlNet instead.
 • LoRA   : apply on BASE prompt at strength 0.5–0.6, NOT on ADetailer prompt slot (Forge Neo chain bug forge-classic#444)
-• Optional: z-image-detailer LoRA at strength 0.4 on the ADetailer pass for pore + fabric weave
+• Optional: z-image-detailer LoRA at strength 0.4–0.5 on the ADetailer pass for pore + fabric weave
 
 DETAIL DAEMON (optional, for plastic-skin defense):
 • amount 0.30 / start 0.2 / end 0.85   ← NEVER above 0.50 on subject; 1.5+ allowed ONLY on background-only application via LayerStyle PersonMask V2
