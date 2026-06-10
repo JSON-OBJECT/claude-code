@@ -19,6 +19,7 @@ You are turning the user's raw thought-dump — **"$ARGUMENTS"** — into one or
 CAPTURE THE INSIGHT IN ITS LINEAGE — STRUCTURE AND SITUATE, NEVER FABRICATE.
 
 Lose no detail the user gave. Fabricate no conclusion the user did not.
+Preserve every concrete; rewrite every sentence — the dump's wording is raw input, never the deliverable.
 Find the past thought this insight extends, updates, or reverses — and link it.
 One (day × event/topic) = one H3 chunk — consolidate facets, never shred a subject.
 The entry is human-authored ground truth.
@@ -28,11 +29,13 @@ An insight is never born from nothing — it is the continuation of an earlier t
 
 **Elaborate the context, not the conclusion.** You MAY add background, lineage, and a terse grounded note drawn from linked local sources. You MAY NOT invent the user's opinion, finish their half-thought, or fuse separate thoughts into a thesis. Situating ≠ synthesizing.
 
+**Distill, don't photocopy.** The dump arrives as spoken-register raw material — run-ons, filler, typos, repetition. The entry is *edited* house-style prose: conclusion-first, compressed, em-dash structured, matching the restraint of neighboring entries. "Lose no detail" protects **concretes** (names, numbers, amounts, dates, the exact lever, a phrase worth quoting) — NOT the user's sentence shapes. Pasting dump sentences with only cosmetic fixes is the dual failure of fabrication: it preserves noise instead of signal and defers the editing that IS this command's job. Fidelity test: every concrete must be recoverable from your rewrite. When a nuance survives only in the user's own phrasing, quote that fragment deliberately *in italics* — quoting is a scalpel, not the default. Calibration: distill to the house style, but never paraphrase so hard that the user's stance or voice drifts — moderate filtration, not opinion rewriting.
+
 **Consolidate facets; never fuse theses.** Over-segmentation is the dual failure mode of fusion. A long dump about ONE product trial / ONE session / ONE event is ONE chapter whose observations become bold-labeled facet bullets — NOT sibling chapters that share a lineage target and cross-`cf.` each other. Fusion (forbidden) = welding *unrelated* subjects under an invented thesis. Consolidation (required) = filing same-subject facets under one H3 without inventing anything.
 
 **Violating the letter of this rule is violating the spirit of `/journal`.**
 
-If you find yourself writing a conclusion the user did not voice, a "common structure" across separate thoughts, copying a source instead of linking it, more than ~7 substance bullets in a single-insight entry, or sibling same-day chapters about one subject — STOP. You crossed from situating into fabricating (or from chunking into shredding).
+If you find yourself writing a conclusion the user did not voice, a "common structure" across separate thoughts, copying a source instead of linking it, a facet bullet that is a dump sentence with only typos fixed, more than ~7 substance bullets in a single-insight entry, or sibling same-day chapters about one subject — STOP. You crossed from situating into fabricating (or from chunking into shredding).
 
 ---
 
@@ -112,9 +115,11 @@ Maturity markers (greppable pipeline — `rg '🌿' journal/` surfaces promotion
    - **Reasoning** — the logic or the *real variable* the user identified (preserve their sharp specifics: numbers, names, the actual lever — this is the detail you must NOT drop)
    - **So-what** — implication / open question (if stated)
    (The grounded fields — Lineage, Context, Links, Tags — are filled in Phase 2. Maturity defaults to 🌱.)
+   **Decoding = rewriting.** Render every field in terse house-style prose — conclusion-first, filler dropped, grammar normalized. Carrying dump sentences into the fields near-verbatim is not decoding; it is deferring the edit and shipping raw material.
 
 4. **Anti-loss / anti-fabrication double-check:**
    - **Lose nothing:** every concrete the user said (amounts, names, the precise insight) survives.
+   - **Distill:** no bullet is a near-verbatim dump sentence — concretes survive, sentence shapes do not (deliberate short quotes in italics excepted).
    - **Fabricate no conclusion:** no invented opinion, no "common structure" fusing separate thoughts, no finished half-thought. Unsure whether the user implied it? Leave it out or phrase it as their open question.
    - **Grounded context is allowed and wanted** (Phase 2) — but it must be sourced from a linked local doc, not from your own reasoning.
 
@@ -292,6 +297,7 @@ If you catch yourself:
 - Relabeling sub-points of a single insight as "facets" to dodge the 5-bullet budget → **fake consolidation. Promote instead.**
 - Dropping or merely name-checking a purchase/event/appointment fragment because "this is the journal command" → **Schedule Handoff. Execute the `/schedule` protocol in the same pass.**
 - "Finishing" a half-formed thought the user trailed off on → **capture it half-formed as 🌱.**
+- A facet bullet that reads exactly like the user's message with typos fixed → **photocopying, not distilling. Rewrite conclusion-first: keep every concrete, drop the filler.**
 - Setting `generated_by: claude-*` or `human_reviewed: false` → **you'd erase the entry from `/ground`. It's the user's insight: `human` / `true`.**
 - Creating `journal/journal-2026-06-07-….md` (per-day file) → **wrong. Month file, (day × subject) chunk.**
 - Writing `[[wikilink]]` syntax anywhere → **dead text outside Obsidian. Standard relative Markdown links only.**
@@ -311,6 +317,7 @@ If you catch yourself:
 | "Adding context means I'm synthesizing — the Iron Law forbids it." | Elaborate the *context* (grounded, linked, minimal), not the *conclusion*. Situating is required; fabricating opinion is forbidden. |
 | "It's my synthesis, so `generated_by: claude` is honest." | The *insight* is the user's; you transcribed it. `human` / `true` is correct AND required — otherwise `/ground` filters out the user's own journal. |
 | "More detail = more useful. Let me expand it." | Verbosity kills chunk precision and buries the signal. ≤5 substance bullets. Over budget = promote, don't bloat. |
+| "Keeping the user's wording verbatim is the safest fidelity." | Fidelity attaches to concretes (names·numbers·dates·levers·quotes), not sentence shapes. Verbatim dump-prose preserves noise, breaks house style, and bloats chunks. Distill — quote deliberately, not by default. |
 | "This canonical doc has great context — I'll fold it in." | Link, don't copy. Duplication drifts. The journal points; the doc holds the story. |
 | "A per-day file is cleaner and more atomic." | Then partial month-level retrieval and the schedule-parallel break. Month = file, (day × subject) = H3 chunk. Not negotiable. |
 | "Each observation deserves its own chapter — smaller chunks retrieve cleaner." | Six siblings sharing one lineage target and one tag set are ONE chapter shredded — scaffold ×6 bloats the month file, dilutes BM25, and scatters the story across competing chunks. Consolidate facets; reserve chapters for distinct subjects. |
@@ -340,7 +347,7 @@ If you catch yourself:
 
 ## Key Principles
 
-- **Transcribe, don't synthesize.** Structure the user's words; never add your own conclusion. This is what makes `human` / `true` provenance honest.
+- **Distill, don't synthesize — and don't photocopy.** Rewrite the user's words into terse house style; never add your own conclusion, never ship their sentences raw. Invented theses and verbatim dump-prose are twin failures. This discipline is what makes `human` / `true` provenance honest.
 - **Every insight has an ancestor.** Find the prior thought it extends/revises/reverses — in docs and in past journal entries — and link it.
 - **Elaborate the context, not the conclusion.** Grounded, linked, minimal background is wanted; invented opinion is forbidden.
 - **Month = file, (day × event/topic) = chunk.** `journal/journal-YYYY-MM.md`, `### YYYY-MM-DD —` H3 anchors enable partial retrieval — mirrors `/schedule`.
