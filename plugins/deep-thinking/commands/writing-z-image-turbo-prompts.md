@@ -139,6 +139,10 @@ candid, unstaged, snapshot
 
 Plus 2–3 **anatomy specifics** (IntellectzPro pattern) — pick from: `square jawline`, `flared nostrils`, `thick lips`, `slender nose`, `puffy cheeks`, `slight overbite`, `crooked front tooth`, `faint laugh lines`, `slightly uneven eyebrows`, `tired under-eye shadow`.
 
+Plus, when the seed demands non-uniform / sun-damaged / lived-in skin: 1–2 **skin-pattern specifics** — region-anchored pigment physics, e.g. `dark irregular sunspots across the cheekbones`, `patchy uneven pigment`, `a wind-burned nose webbed with fine broken capillaries`, `vitiligo patches`, `faded acne scarring along the jaw`, `paler untanned skin inside the crease lines and under the chin` (r/ZImageAI 1u3vcoz; pattern-breaking skin tokens are the strongest anti-uniformity lever after the 4-Stack). Anchor every pattern to a named face region — region-anchored physics reads as a photograph; a bare adjective (`weathered skin`, `imperfect skin`) reads as a filter. The 1–2 baseline scales up when the seed demands region-level differentiation: one anchor per named region (cheekbones / nose / forehead / jaw / crease lines), word budget permitting.
+
+The anatomy and skin-pattern lists are **seed pools, not closed lists.** When the seed demands skin or feature behavior the tables don't cover, synthesize new region-anchored physical description in the same spirit (texture beats adjective) — never fall back to abstract adjectives, and never treat "it's not in the table" as a reason to drop the seed's requirement.
+
 Plus 1–2 **texture-on-clothing** descriptors. NOT "wool jacket" — "fuzzy worn wool jacket with frayed cuffs". NOT "leather boots" — "scuffed black leather boots with crusted mud on the toe-cap". Tactile beats visual.
 
 ⛔ **`average` STANDALONE is FORBIDDEN.** It must always sit inside the stack `realistic + ordinary + everyday + average`. Solo `average` regresses ZIT into MORE plastic faces (90hex empirical).
@@ -153,6 +157,13 @@ The 90hex split is: **fixed identity plaintext + 11 mustache-variable slots for 
 ```
 
 Each slot holds **6–9 options**. Combinatorial pool ≈ hundreds of millions; you do NOT enumerate — the user rolls a batch of 32 (or more) and surfaces variety statistically.
+
+**Slot order = manifestation priority (empirical).** The further back a mustache slot sits in the paragraph, the higher its chance of being silently ignored — *even within the word budget*. A late-position slot that never manifested in any roll began registering only after being moved to the front (r/SD 1pnkdvc). So do NOT treat the slot listing above as a required sequence; order the slots by must-manifest priority for THIS seed:
+
+- Any variation axis the user declared critical goes as early as the prose allows — immediately after the fixed identity block.
+- Cosmetic slots (mood, texture, atmosphere) belong at the back; they degrade gracefully.
+- **Hand-edits follow the same law:** when you (or the user) later add a new slot to an existing template, insert it by priority, never by appending at the end — end-appended slots are exactly the documented failure case.
+- Two standing exceptions override priority order: gaze direction lives in the first 5 words (Phase 6), and capture/camera language stays bound to `photograph` at the frame's extremes (Phase 6 #5) — never promote the camera pool mid-scene for "priority" reasons.
 
 **Mustache syntax cheat-sheet (sd-dynamic-prompts grammar):**
 
@@ -313,6 +324,8 @@ If you catch yourself thinking:
 - "Taller canvas = more full-body, so I'll generate at 9:16." — WRONG. Off-grid extreme ratios make ZIT tile two crops (giant head + cut figure). Stay on the 1MPix grid (832×1216 tall max) and gain height via Hires upscale.
 - "I'll add `no camera visible` / `no phone` so the gear stays out of frame." — WRONG. ZIT can't negate; naming the noun SUMMONS it (1qr60ja, 1p8scnf). Omit the device noun entirely and bind capture terms to `photograph` as the medium at the frame's extremes.
 - "I'll drop the camera body mid-scene next to her / write `the camera held level`." — WRONG. That instantiates the camera as a held prop or a selfie (1qr60ja). Bind it to `photograph` at the front or ONE trailing capture clause, occupy the hands with an action, and prefer generic point-and-shoot over device names.
+- "I'll append the new slot at the end of the template — least disruptive edit." — WRONG. End-appended slots are the documented silent-failure case (r/SD 1pnkdvc). Insert by must-manifest priority, right after the fixed identity block if critical.
+- "The seed's skin demand isn't in the anatomy table, so I'll soften it to `weathered skin`." — WRONG. The lists are seed pools, not closed lists. Synthesize region-anchored pigment physics (`sunspots across the cheekbones`, `broken capillaries on the nose`); a bare adjective reads as a filter.
 - "The Iron Law is just a guideline." — WRONG. The triple + the mustache split are the entire reason this command exists.
 
 **ALL of these mean: STOP. Return to Phase 1 and decode the seed again.**
@@ -346,6 +359,8 @@ If you catch yourself thinking:
 | "Mixing a close-up cue and a full-body cue is fine." | ZIT adherence is cue-sensitive; conflicting framing cues decompress/confuse composition (r/SD 1qwcz6a). One framing per template. |
 | "Naming the camera / `shot on iPhone` makes it more photoreal." | It also *draws the device* — the subject holds it or it becomes a selfie showing a phone (r/SD 1qr60ja). Bind capture terms to `photograph` as the medium at the frame's extremes, occupy the hands, and prefer generic `point-and-shoot / 35mm film` over device names. |
 | "I'll add `no camera visible` to keep the gear out." | ZIT can't negate — naming summons (`no green olive` → olive appears; r/SD 1p8scnf). Omit the noun entirely; describe only the image medium, never the apparatus. |
+| "Slot position doesn't matter as long as I'm under 400 words." | Manifestation probability decays toward the tail even inside the word budget (r/SD 1pnkdvc). Critical slots go early; cosmetic slots (mood/texture/atmosphere) go last. |
+| "`weathered skin` covers the sun-damage request." | Bare adjectives read as a filter. Region-anchored pigment physics — `sunspots across the cheekbones`, `a wind-burned nose webbed with broken capillaries` — read as a photograph. |
 
 ---
 
@@ -357,7 +372,7 @@ If you catch yourself thinking:
 | **2. Fixed Identity** | Lock plaintext: identity + era + place + 4-Stack + anatomy + gaze | No mustache on identity attributes |
 | **3. Triple Lock** | Pick verified camera + film + lighting modifier; mustache-eligible | All three from tables, no DSLR-solo, no `cinematic lighting` |
 | **4. Anti-AI Stack** | 4-Stack + 2–3 anatomy + 1–2 texture descriptors | All four anchors present, `average` never solo |
-| **5. 11-Slot Mustache** | 6–9 options per slot: camera / composition / time-of-day / expression / pose / lighting / mood / wardrobe / color / texture / atmosphere | All 11 slots present, identity NOT mustached, empty-option trick used for "sometimes" attributes |
+| **5. 11-Slot Mustache** | 6–9 options per slot: camera / composition / time-of-day / expression / pose / lighting / mood / wardrobe / color / texture / atmosphere | All 11 slots present, identity NOT mustached, empty-option trick used for "sometimes" attributes, slots ordered by must-manifest priority (critical early, cosmetic last) |
 | **6. BG + Gaze Check** | Place-lead if BG matters; strip front anatomy if subject looks away | No collapsing background, no rotated-face contradiction |
 | **7. Sweep + Word Count** | Resolved roll = 200–400 words; forbidden-words sweep clean | Template surface 300–450 words; resolved 200–400; no forbidden tokens |
 
@@ -374,6 +389,7 @@ If you catch yourself thinking:
 - **Anchor the era.** Unanchored = 2024 generic. Pick a decade and commit.
 - **Place-lead when background matters.** Otherwise ZIT paints the foreground and abandons the back.
 - **Strip anatomy when the gaze leaves the camera.** Otherwise ZIT rotates the head back.
+- **Critical slots go early.** Manifestation decays toward the paragraph's tail even within the word budget — order mustache slots by must-manifest priority, keep cosmetic slots (mood/texture/atmosphere) last, and insert hand-added slots by priority, never by appending at the end.
 - **Fixed identity + 11 mustache slots = 90hex's executable doctrine.** This is THE 90hex pattern. Identity locked plaintext; environment / composition / wardrobe / mood mustache-variable. Without the split, ZIT determinism kills your lookbook.
 - **The 90hex triple is non-negotiable.** Camera + Film + Anti-AI 4-Stack. Without all three, output looks like AI.
 - **One person per prompt.** Multi-character prompts break ZIT's single-stream attention. Composite multiples in post.
