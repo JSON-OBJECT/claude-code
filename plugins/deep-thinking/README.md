@@ -43,6 +43,14 @@ With `autoUpdate: true` on the marketplace (default), refresh also happens autom
 | `/deep-thinking:schedule {path-or-directory}` | Create, refine, or audit schedule/calendar markdown into month-anchored, bookmark-style ground-truth indexes optimized for grounding, RAG retrieval, and chunk-based parsing instead of narrative-stuffed tables |
 | `/deep-thinking:journal "{raw thoughts}"` | Turn a raw thought-dump into a clean, lineage-aware, ground-searchable entry in the monthly insight log — supports add, refine, promote, and review modes |
 
+## Skills
+
+Skills activate automatically when their trigger conditions match — no slash command needed.
+
+| Skill | Description |
+|-------|-------------|
+| `game-juice` | Build or polish browser UI that FEELS like a Japanese gacha/casual mobile game — damage numbers, hit impact, screen shake, springy buttons, combos. Treats juice as FEEDBACK (not decoration), enforces earned-juice restraint to avoid the generic AI-mass-produced feel, and orchestrates `impeccable` (visuals) + `gsap` skills (animation) with canon-anchored parameters |
+
 ## Usage Examples
 
 ```bash
