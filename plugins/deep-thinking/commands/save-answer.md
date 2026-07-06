@@ -4,7 +4,7 @@ allowed-tools: Read, Write, Bash, Grep, Glob
 argument-hint: [optional slug override]
 ---
 
-# Crystallize Command — Save the Previous Q&A Pair
+# Save-Answer Command — Save the Previous Q&A Pair
 
 You are permanently archiving the **previous question-answer pair from THIS conversation** into the vault's `_answers/` folder. Optional slug override: **"$ARGUMENTS"**.
 
@@ -141,4 +141,4 @@ If you catch yourself thinking:
 
 ---
 
-Now crystallize the previous Q&A pair. Slug override: **"$ARGUMENTS"**
+Now save the previous Q&A pair. Slug override: **"$ARGUMENTS"**
