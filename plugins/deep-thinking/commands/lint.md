@@ -57,12 +57,12 @@ NEVER READ _inbox/ CONTENTS — metadata (count, age) only.
 
 3. **Broken relative links** — extract every non-HTTP `.md` link target, resolve it against the linking file's directory, and `test -f` each:
    ```bash
-   rg -o --no-heading -n '\]\(([^)#]+\.md)' -r '$1' -t md -g '!_inbox' -g '!_archive' | rg -v '://'
+   rg -o --no-heading -n '\]\(([^)#]+\.md)' -r '$1' -t md -g '!_inbox' -g '!_archive' -g '!_answers' | rg -v '://'
    ```
    The `rg -v '://'` tail is REQUIRED — web URLs containing `.md` segments (e.g. `https://www.md…`) are not vault links (empirical false positive from verification testing).
    A citation that names a nonexistent file **with line numbers** is a GHOST CITATION — Critical severity, because /ground will try to follow it.
 
-4. **House link convention** — `[[wikilinks]]` are forbidden in this vault (outputs must be browser-clickable relative links): `rg -n '\[\[' -t md -g '!_inbox' -g '!_archive'`. Matches inside code blocks are candidates, not findings — verify before reporting.
+4. **House link convention** — `[[wikilinks]]` are forbidden in this vault (outputs must be browser-clickable relative links): `rg -n '\[\[' -t md -g '!_inbox' -g '!_archive' -g '!_answers'`. Matches inside code blocks are candidates, not findings — verify before reporting.
 
 5. **Review backlog + inbox aging** (metadata ONLY):
    ```bash
