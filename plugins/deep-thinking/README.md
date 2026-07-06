@@ -42,6 +42,7 @@ With `autoUpdate: true` on the marketplace (default), refresh also happens autom
 | `/deep-thinking:hidden-reality {idea or topic}` | Anti-optimization idea forge — suggests, verifies, or defends "Hidden Reality" software ideas against an 11-mechanism doctrine (imperfection, friction, anti-utility, defamiliarization, scale violation, etc.) with academic backbone (Tega Brain, 한병철, Shklovsky, Dunne & Raby) and a 2-week prototype scope |
 | `/deep-thinking:schedule {path-or-directory}` | Create, refine, or audit schedule/calendar markdown into month-anchored, bookmark-style ground-truth indexes optimized for grounding, RAG retrieval, and chunk-based parsing instead of narrative-stuffed tables |
 | `/deep-thinking:journal "{raw thoughts}"` | Turn a raw thought-dump into a clean, lineage-aware, ground-searchable entry in the monthly insight log — supports add, refine, promote, and review modes |
+| `/deep-thinking:init-vault [directory]` | Transform any folder of markdown files (or an empty folder) into an LLM Wiki vault in one shot — per-OS FTS5 trigram preflight, pipeline CLI install, `fts5-reindex.py` deployment, `_inbox/`/`_archive/`/`_answers/` scaffolding, `git init` + `.gitignore`, non-destructive CLAUDE.md vault protocol with command routing, and a BM25 smoke-query verification |
 
 ## Skills
 
@@ -111,6 +112,7 @@ Skills activate automatically when their trigger conditions match — no slash c
 | `/deep-thinking:hidden-reality` | None | Brave Search (SCOUT mode for live 2025–2026 artifacts) |
 | `/deep-thinking:schedule` | None | - |
 | `/deep-thinking:journal` | Time | - |
+| `/deep-thinking:init-vault` | None | - |
 
 ### Quick MCP Setup
 
@@ -156,7 +158,11 @@ brew install harehare/tap/mq
 
 #### Optional but Recommended — Build the FTS5 Index
 
-The `/deep-thinking:ground` pipeline runs without an index (Stage 1 falls back to `rg`/`Grep`), but the FTS5 index unlocks **BM25-ranked candidate selection** — the single biggest context-budget saver across the 5 stages, especially for CJK substring matching via the trigram tokenizer. Drop `fts5-reindex.py` into the markdown directory you want to ground against (it auto-detects its own parent as the vault root) and run it once:
+The `/deep-thinking:ground` pipeline runs without an index (Stage 1 falls back to `rg`/`Grep`), but the FTS5 index unlocks **BM25-ranked candidate selection** — the single biggest context-budget saver across the 5 stages, especially for CJK substring matching via the trigram tokenizer.
+
+> **Shortcut:** run `/deep-thinking:init-vault` inside the folder — it performs the CLI preflight above, deploys the script, scaffolds the vault conventions, builds the index, and verifies it with a BM25 smoke query, all in one command. The manual steps below remain for setups outside Claude Code.
+
+Drop `fts5-reindex.py` into the markdown directory you want to ground against (it auto-detects its own parent as the vault root) and run it once:
 
 ```bash
 # 1. Copy the script into the LLM Wiki / markdown archive root
