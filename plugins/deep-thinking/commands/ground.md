@@ -64,17 +64,19 @@ A 150K-char file consumes ~42K tokens — 4.2% of a 1M context window. Three suc
    - **Default exclude `_inbox/`, `_archive/`** — `_inbox/` holds Web-Clipper-ingested unreviewed notes (prompt injection surface), `_archive/` is explicit burial. Include only when user explicitly asks (`"include inbox in search"`).
 
 2. **Content match** (only files that actually mention the keyword)
-   - **Preferred when `vault.fts5.db` exists at repo root — BM25-ranked file list:**
+   - **Preferred when `vault.fts5.db` exists at repo root — BM25-ranked SECTION list:**
      ```bash
      sqlite3 vault.fts5.db -separator $'\t' "
-       SELECT rel_path, bm25(notes_fts) AS score
+       SELECT rel_path, heading, start_line || '-' || end_line, bm25(notes_fts) AS score
        FROM notes_fts
        WHERE notes_fts MATCH '<keyword>'
-         AND (human_reviewed != 'false' OR human_reviewed IS NULL)
+         AND human_reviewed != 'false'
+         AND superseded_by = ''
        ORDER BY score LIMIT 10;"
      ```
-     BM25 returns files **ranked by keyword density** (TF-IDF), not alphabetical. The top 5 of a 30-file match are the ones to read; the rest are passing mentions. This is the single biggest context-budget saver Stage 1 offers.
-   - **Fallback when DB absent or returns 0** (DB may be stale; run `python3 fts5-reindex.py` — 3s for 200 files):
+     Each row in the DB is a **section** (split at H1–H3 boundaries, code fences respected), not a whole file. A hit therefore returns `rel_path + heading + line range` in one query — Stage 1 discovery, the Stage 2 heading map for that hit, and Stage 3 pinpointing collapse into a single call. BM25 ranks by keyword density (TF-IDF) at section granularity, so a 150K-char mega-file no longer competes as one giant document. This is the single biggest context-budget saver Stage 1 offers.
+     - `AND superseded_by = ''` excludes stale documents that have been explicitly replaced (see the supersession contract in Stage 4). Drop this clause only when the user asks for document history/lineage.
+   - **Fallback when DB absent or returns 0** (DB may be stale; run `python3 fts5-reindex.py` — a few seconds for a few hundred files):
      - Internal: `Grep` with `pattern=<keyword>`, `output_mode="files_with_matches"`, `type="md"`
      - Shell: `rg -l -t md '<keyword>'`
    - Try synonym/abbreviation variants in this step: brand names, abbreviations, synonyms
@@ -109,6 +111,8 @@ A 150K-char file consumes ~42K tokens — 4.2% of a 1M context window. Three suc
 **GATE: Files >500 lines MUST be mapped before they are read.**
 
 Long-form `.md` files in this repo routinely exceed 2,000 lines. Reading top-to-bottom wastes context.
+
+**Shortcut:** if Stage 1's FTS5 query already returned the target section's `heading + start_line-end_line`, Stage 2 is satisfied for that hit — proceed directly to Stage 3/4 within that line range. Run the full heading map only when you need the file's overall structure (interpretive questions, multi-section synthesis) or when working from the Grep fallback.
 
 1. Extract the table of contents:
    - **Preferred — `mq` (AST-level, zero false positives):**
@@ -148,6 +152,13 @@ Every claim in your final answer MUST be traceable to a `file:line` from this st
   - `generated_by: claude-*` AND `human_reviewed: false` → **the file is LLM-synthesized and unreviewed.** Do NOT cite as primary evidence. Use only as boilerplate context, and surface a warning in the Grounding summary that human review is required.
   - `human_reviewed: true` OR no `generated_by` field → human-authored or human-validated, citable as a primary source.
   - **Why:** if the agent cites its own past synthesis as truth, every subsequent answer compounds prior hallucinations. The MIT Kosmyna cognitive-debt mechanism is exactly this closed loop. The gate breaks it.
+- **Supersession gate (knowledge lineage):** check `.superseded_by` in the same yq call:
+  ```bash
+  yq --front-matter=extract '.generated_by, .human_reviewed, .superseded_by' <candidate>.md
+  ```
+  - `superseded_by: <newer-file>.md` present → **the file is stale by explicit declaration.** Do NOT cite it as primary evidence — follow the pointer and ground the answer in the newer file instead. Mention the lineage in the Grounding summary only if the user asked about history.
+  - The inverse field `supersedes: <older-file>.md` marks the current canon; when promoting a rewritten document, set BOTH fields (new file gets `supersedes:`, old file gets `superseded_by:`) so the link is bidirectional. Old files are preserved, never deleted — supersession is version control for knowledge, not burial.
+  - Stage 1's FTS5 query already filters `superseded_by = ''`, so a superseded file reaching Stage 4 usually means it arrived via Grep fallback or a direct user pointer — the gate is the last line of defense.
 - **Detail vs Summary rule:** When **detailed entries** (date/place/item per individual row) AND **summary paragraphs** (compressed into one block) coexist in the same file, the **detailed entries are the canonical source.** Summaries compress and merge entities. Empirical: "Store A → Item X, Store B → Item Y" (2 stores, 2 items) were merged into "found in [district]" in the summary — causing incorrect store attribution.
 - **Human verification:** `glow <file>.md` renders the markdown in-terminal — use to visually confirm tables, links, and heading structure are intact.
 
@@ -251,7 +262,8 @@ If you catch yourself thinking:
 | "This one file completes the answer." | Interpretive questions ("define X?") require multiple files providing different layers (facts/philosophy/archetype/impression). Single-file answers are one-dimensional. |
 | "Searching the question's exact words is sufficient." | Searching "essence as a human" with only the word "essence" misses half the results. Expand to `loneliness`, `conviction`, `yearning`, `DNA`, `archetype`. |
 | "This summary paragraph settles the facts." | Summaries compress places, dates, and entities. Empirical: "found in [district]" summary → actually 2 different stores with 2 different items. Detailed rows are canonical. |
-| "The DB might be stale, just use ripgrep." | `python3 fts5-reindex.py` takes 3 seconds. Reindex and get BM25 ranking — ripgrep only gives alphabetical order, it does not know which file is most relevant. |
+| "The DB might be stale, just use ripgrep." | `python3 fts5-reindex.py` takes a few seconds. Reindex and get section-level BM25 ranking with `heading + line range` — ripgrep only gives alphabetical order and no ranking. |
+| "The superseded file says the same thing, citing it is harmless." | `superseded_by` exists precisely because the newer file corrected something. You cannot know which claim was corrected without reading the newer file — so ground in the newer file. |
 | "I made this file with deep-research, so I can trust it." | If `human_reviewed: false`, citing it as truth is the **closed loop of citing your own synthesis as ground truth.** That is the definition of cognitive debt. Do not cite as primary evidence. |
 | "The answer might be in `_inbox/` too, let's just search there." | `_inbox/` holds unreviewed external input — a prompt injection surface. Exclude from indexing AND searching unless the user explicitly says *"include inbox"*. |
 | "BM25 score differences are small, the ripgrep order is fine." | Even when BM25 scores are close, the *order* is meaningful. Reading the top 5 saves ~70% of context. Reading all 30 matches is budget waste. |
@@ -264,8 +276,8 @@ If you catch yourself thinking:
 | Stage | Activity | Primary Tool | Shell Fallback | Success Criterion |
 |-------|----------|-------------|----------------|-------------------|
 | **0. Awareness** | Choose tool layer | — | — | Internal tools chosen unless pipeline needed |
-| **1. Discovery** | Narrow + rank candidates (multi-lang) | `Glob`, **`sqlite3 vault.fts5.db ... ORDER BY bm25`** (when DB exists), `Grep` fallback | `fd -e md`, `rg -l -t md` | Candidates produced + BM25-ranked; EN/KR/JP variants tried; `_inbox`/`_archive` excluded; ≥5 → Explore delegation |
-| **2. Map** | Heading scan of long files | `Grep ^#{1,3}\s` | **`mq '.h2'`** (preferred), `rg -n '^#{1,3}\s'` | Section line ranges identified |
+| **1. Discovery** | Narrow + rank candidate SECTIONS (multi-lang) | `Glob`, **`sqlite3 vault.fts5.db ... ORDER BY bm25`** (section rows: `rel_path + heading + line range`; superseded excluded), `Grep` fallback | `fd -e md`, `rg -l -t md` | Sections produced + BM25-ranked; EN/KR/JP variants tried; `_inbox`/`_archive` excluded; ≥5 → Explore delegation |
+| **2. Map** | Heading scan of long files (skippable per-hit when Stage 1 returned the section) | `Grep ^#{1,3}\s` | **`mq '.h2'`** (preferred), `rg -n '^#{1,3}\s'` | Section line ranges identified |
 | **3. Pinpoint** | Extract cited context | `Grep -n -C 5` | `rg -n -C 5` | `file:line` citations captured |
 | **4. Verify** | Targeted read | `Read offset/limit`, `Agent(Explore)` | `glow` (render check) | Passage read in surrounding context |
 | **5. Augment** | Fill gaps from web/social | `mcp__brave-search__*`, `mcp__reddit__*` | — | Gap-only URLs added; local citations preserved |
@@ -274,7 +286,7 @@ If you catch yourself thinking:
 
 ## Golden One-Liner
 
-> **`Glob` → `FTS5 BM25` (or `Grep` fallback) → `mq` (headings) → `Grep -n -C` (context) → `Read` + frontmatter gate → `glow` (verify) → web only for gaps.**
+> **`Glob` → `FTS5 BM25` (section hits: `file + heading + lines`; or `Grep` fallback) → `mq` (headings, when Stage 1 didn't already map the hit) → `Grep -n -C` (context) → `Read` + frontmatter/supersession gate → `glow` (verify) → web only for gaps.**
 > Narrow → Rank → Map → Pinpoint → Verify (provenance!) → Augment. Never reverse the order.
 
 ---
@@ -298,8 +310,8 @@ If you catch yourself thinking:
 - **Global `~/.claude/CLAUDE.md`** — defines the mandatory modern-CLI mapping (`grep→rg`, `find→fd`, etc.) used in Stages 1–3 shell fallbacks.
 - **`software-engineering/claude-code/claude-code-cli-boost-tools.md`** — canonical reference for the shell tool layer; consult §"Shell Tool Selection — MANDATORY" and §"10. mq — jq for Markdown" before any `Bash` call.
 - **`~/.ripgreprc`** — custom type `--type-add=research:*.md` enables `rg --type research` for markdown-only searches.
-- **`fts5-reindex.py`** at vault root — generates `vault.fts5.db` with trigram tokenizer for Stage 1 BM25-ranked content match. Run after major edits (3s for ~200 files). DB absent → Stage 1 falls back to Grep/rg automatically.
-- **Frontmatter contract** — files synthesized by `/deep-research` or other agents MUST carry `generated_by: claude-*` and `human_reviewed: false` until a human promotes them. Stage 4 enforces this gate.
+- **`fts5-reindex.py`** at vault root — generates `vault.fts5.db` with trigram tokenizer, **one row per H1–H3 section** (code-fence aware), for Stage 1 BM25-ranked content match returning `rel_path + heading + line range`. Run after major edits (a few seconds for a few hundred files). DB absent → Stage 1 falls back to Grep/rg automatically.
+- **Frontmatter contract** — files synthesized by `/deep-research` or other agents MUST carry `generated_by: claude-*` and `human_reviewed: false` until a human promotes them. Stage 4 enforces this gate. Knowledge lineage uses the paired fields `supersedes: <older>.md` (on the new canon) and `superseded_by: <newer>.md` (on the stale file) — Stage 1 filters superseded rows, Stage 4 refuses to cite them.
 - **Web augmentation (Stage 5)** — Brave Search MCP only (never built-in `WebSearch`); sequential calls only; freshness flags `pd`/`pw`/`pm`/`py` per global policy.
 - **Archive maintenance** — run `lychee "**/*.md"` periodically to detect link rot in source citations.
 

@@ -5,13 +5,21 @@
 #
 # Purpose
 # -------
-# Index every .md file under the directory containing this script
-# (treated as the LLM Wiki / vault root) into a SQLite FTS5 virtual
-# table with the trigram tokenizer, producing `vault.fts5.db` for the
-# Stage 1.5 acceleration layer of the `/ground` command. Drop this
-# script at the root of any markdown archive and run it in place — no
-# path configuration required. Each run drops the DB and rebuilds from
-# scratch (no incremental updates).
+# Index every .md file in this repository
+# (`/home/jsonobject/sources/private-knowledge-base`) into a SQLite FTS5
+# virtual table with the trigram tokenizer, producing `vault.fts5.db` for
+# the Stage 1.5 acceleration layer of the `/ground` command. Each run
+# drops the DB and rebuilds from scratch (no incremental updates).
+#
+# Section-level indexing (v2)
+# ---------------------------
+# Each row is a **section**, not a whole file. Files are split at H1–H3
+# heading boundaries (code fences respected), so a BM25 hit returns
+# `rel_path + heading + start_line` directly — collapsing /ground
+# Stage 1 (discovery), Stage 2 (heading map), and part of Stage 3
+# (pinpoint) into a single query. Whole-file rows distorted BM25: a
+# 150K-char file competed as one giant document, and a match told you
+# the file but not where. Section rows fix both.
 #
 # Why the trigram tokenizer
 # -------------------------
@@ -21,6 +29,17 @@
 # 2021) slices text into 3-character windows, enabling CJK substring
 # matching and typo tolerance. Index size grows ~3x, but at 200–few-thousand
 # files that overhead is negligible.
+#
+# Supersession frontmatter
+# ------------------------
+# Files may declare knowledge lineage in frontmatter:
+#
+#   supersedes: old-doc.md          # this file replaces old-doc.md
+#   superseded_by: new-doc.md       # this file is stale; read new-doc.md
+#
+# `superseded_by` is indexed as a filterable column. /ground Stage 1
+# excludes superseded rows by default (`AND superseded_by = ''`), and
+# Stage 4 refuses to cite a superseded file as primary evidence.
 #
 # =============================================================================
 # Installation — Homebrew, unified across macOS / Linux / WSL2
@@ -80,20 +99,21 @@
 # Usage
 # =============================================================================
 #
-#   cd /path/to/your/markdown-vault   # the directory containing this script
+#   cd /home/jsonobject/sources/private-knowledge-base
 #   python3 fts5-reindex.py
 #
 #   # Example output:
-#   #   Indexed 210 notes in 4.2s → vault.fts5.db (28.4 MB)
+#   #   Indexed 210 notes (1450 sections) in 4.2s → vault.fts5.db (31.7 MB)
 #
-# Example query (BM25 ranking):
+# Example query (BM25 ranking, section-level):
 #
-#   sqlite3 vault.fts5.db -header -column "
-#     SELECT rel_path, snippet(notes_fts, 5, '«', '»', '…', 10) AS preview
+#   sqlite3 vault.fts5.db -separator $'\t' "
+#     SELECT rel_path, heading, start_line, bm25(notes_fts) AS score
 #     FROM notes_fts
-#     WHERE notes_fts MATCH 'framework'
-#       AND (human_reviewed != 'false' OR human_reviewed IS NULL)
-#     ORDER BY bm25(notes_fts) LIMIT 10;"
+#     WHERE notes_fts MATCH '\"키워드\"'
+#       AND human_reviewed != 'false'
+#       AND superseded_by = ''
+#     ORDER BY score LIMIT 10;"
 #
 # =============================================================================
 
@@ -120,6 +140,7 @@ EXCLUDE_DIRS = {
 
 # ----- Frontmatter parser -----
 FM_RE = re.compile(r"\A---\n(.*?)\n---\n", re.DOTALL)
+FM_KEYS = ("generated_by", "human_reviewed", "supersedes", "superseded_by")
 
 try:
     import yaml  # type: ignore
@@ -133,9 +154,10 @@ try:
         except yaml.YAMLError:
             return {}
 except ImportError:
-    # PyYAML missing: fall back to extracting only generated_by and
-    # human_reviewed via regex.
-    KEY_RE = re.compile(r"^(generated_by|human_reviewed)\s*:\s*(.+?)\s*$", re.MULTILINE)
+    # PyYAML missing: fall back to extracting only the FM_KEYS via regex.
+    KEY_RE = re.compile(
+        r"^(" + "|".join(FM_KEYS) + r")\s*:\s*(.+?)\s*$", re.MULTILINE
+    )
     def parse_frontmatter(text: str) -> dict:
         m = FM_RE.match(text)
         if not m:
@@ -144,6 +166,79 @@ except ImportError:
         for key, val in KEY_RE.findall(m.group(1)):
             result[key] = val.strip().strip('"').strip("'")
         return result
+
+
+def fm_str(meta: dict, key: str) -> str:
+    """Normalize a frontmatter value to a lowercase-safe string.
+
+    PyYAML parses `human_reviewed: false` into Python False, whose
+    str() is 'False' (capital F) — which silently defeated the
+    `!= 'false'` SQL filter in /ground Stage 1. Booleans are therefore
+    lowercased; lists (e.g. supersedes: [a.md, b.md]) join with ', '.
+    """
+    val = meta.get(key, "")
+    if isinstance(val, bool):
+        return "true" if val else "false"
+    if isinstance(val, list):
+        return ", ".join(str(v) for v in val)
+    return str(val) if val is not None else ""
+
+
+# ----- Markdown section splitter -----
+HEADING_RE = re.compile(r"^(#{1,3})\s+(.*)$")
+FENCE_RE = re.compile(r"^\s{0,3}(```|~~~)")
+
+
+def split_sections(text: str):
+    """Split markdown into (heading, start_line, end_line, body) tuples.
+
+    Boundaries are H1–H3 headings outside code fences and outside the
+    YAML frontmatter block. Content before the first heading becomes a
+    '(preamble)' section. Line numbers are 1-indexed to match rg/Read.
+    """
+    lines = text.split("\n")
+
+    # Frontmatter span (skipped for heading detection, kept in preamble body)
+    fm_end = 0  # last line index (0-based, exclusive) of frontmatter
+    if lines and lines[0] == "---":
+        for i in range(1, len(lines)):
+            if lines[i] == "---":
+                fm_end = i + 1
+                break
+
+    boundaries = []  # (line_index_0based, heading_text)
+    in_fence = False
+    fence_marker = ""
+    for i, line in enumerate(lines):
+        if i < fm_end:
+            continue
+        fence = FENCE_RE.match(line)
+        if fence:
+            marker = fence.group(1)
+            if not in_fence:
+                in_fence, fence_marker = True, marker
+            elif marker == fence_marker:
+                in_fence = False
+            continue
+        if in_fence:
+            continue
+        h = HEADING_RE.match(line)
+        if h:
+            boundaries.append((i, h.group(0).strip()))
+
+    if not boundaries:
+        return [("(preamble)", 1, len(lines), text)]
+
+    sections = []
+    first = boundaries[0][0]
+    if any(l.strip() for l in lines[:first]):
+        sections.append(("(preamble)", 1, first, "\n".join(lines[:first])))
+
+    for n, (start, heading) in enumerate(boundaries):
+        end = boundaries[n + 1][0] if n + 1 < len(boundaries) else len(lines)
+        sections.append((heading, start + 1, end, "\n".join(lines[start:end])))
+
+    return sections
 
 
 def verify_runtime():
@@ -184,10 +279,15 @@ def main():
         CREATE VIRTUAL TABLE notes_fts USING fts5(
             path UNINDEXED,
             rel_path UNINDEXED,
+            heading UNINDEXED,
+            start_line UNINDEXED,
+            end_line UNINDEXED,
             mtime UNINDEXED,
             size UNINDEXED,
             generated_by UNINDEXED,
             human_reviewed UNINDEXED,
+            supersedes UNINDEXED,
+            superseded_by UNINDEXED,
             body,
             tokenize = 'trigram'
         );
@@ -195,6 +295,7 @@ def main():
 
     t0 = time.perf_counter()
     rows = []
+    n_files = 0
     skipped = 0
 
     for f in VAULT.rglob("*.md"):
@@ -202,27 +303,36 @@ def main():
             skipped += 1
             continue
         try:
-            body = f.read_text(encoding="utf-8", errors="replace")
+            text = f.read_text(encoding="utf-8", errors="replace")
         except OSError as e:
             print(f"[!] Failed to read {f}: {e}", file=sys.stderr)
             continue
 
-        meta = parse_frontmatter(body)
-        rows.append((
+        n_files += 1
+        meta = parse_frontmatter(text)
+        mtime = int(f.stat().st_mtime)
+        common = (
             str(f),
             str(f.relative_to(VAULT)),
-            int(f.stat().st_mtime),
-            len(body),
-            str(meta.get("generated_by", "")),
-            str(meta.get("human_reviewed", "")),
-            body,
-        ))
+        )
+        tail = (
+            mtime,
+            len(text),
+            fm_str(meta, "generated_by"),
+            fm_str(meta, "human_reviewed"),
+            fm_str(meta, "supersedes"),
+            fm_str(meta, "superseded_by"),
+        )
+        for heading, start_line, end_line, body in split_sections(text):
+            rows.append(common + (heading, start_line, end_line) + tail + (body,))
 
     with con:
         con.executemany(
             "INSERT INTO notes_fts"
-            "(path, rel_path, mtime, size, generated_by, human_reviewed, body)"
-            " VALUES (?, ?, ?, ?, ?, ?, ?)",
+            "(path, rel_path, heading, start_line, end_line,"
+            " mtime, size, generated_by, human_reviewed,"
+            " supersedes, superseded_by, body)"
+            " VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
             rows,
         )
 
@@ -233,8 +343,8 @@ def main():
     db_mb = DB_PATH.stat().st_size / 1e6
 
     print(
-        f"[OK] Indexed {len(rows)} notes "
-        f"(skipped {skipped} excluded) "
+        f"[OK] Indexed {n_files} notes ({len(rows)} sections, "
+        f"skipped {skipped} excluded) "
         f"in {elapsed:.2f}s → {DB_PATH.name} ({db_mb:.1f} MB)",
         file=sys.stderr,
     )
