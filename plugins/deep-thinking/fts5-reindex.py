@@ -5,9 +5,9 @@
 #
 # Purpose
 # -------
-# Index every .md file in this repository
-# (`/home/jsonobject/sources/private-knowledge-base`) into a SQLite FTS5
-# virtual table with the trigram tokenizer, producing `vault.fts5.db` for
+# Index every .md file in the vault (the directory this script lives in)
+# into a SQLite FTS5 virtual table with the trigram tokenizer, producing
+# `vault.fts5.db` for
 # the Stage 1.5 acceleration layer of the `/ground` command. Each run
 # drops the DB and rebuilds from scratch (no incremental updates).
 #
@@ -99,7 +99,7 @@
 # Usage
 # =============================================================================
 #
-#   cd /home/jsonobject/sources/private-knowledge-base
+#   cd /path/to/your/vault
 #   python3 fts5-reindex.py
 #
 #   # Example output:

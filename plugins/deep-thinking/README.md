@@ -160,7 +160,7 @@ The `/deep-thinking:ground` pipeline runs without an index (Stage 1 falls back t
 
 ```bash
 # 1. Copy the script into the LLM Wiki / markdown archive root
-cp ~/.claude/plugins/marketplaces/jsonobject-marketplace/fts5-reindex.py /path/to/your/llm-wiki/
+cp ~/.claude/plugins/marketplaces/jsonobject-marketplace/plugins/deep-thinking/fts5-reindex.py /path/to/your/llm-wiki/
 
 # 2. Build vault.fts5.db at that root (~3s for ~200 files)
 cd /path/to/your/llm-wiki
