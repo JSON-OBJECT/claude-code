@@ -28,21 +28,34 @@ With `autoUpdate: true` on the marketplace (default), refresh also happens autom
 
 ## Commands
 
+### LLM Wiki Commands
+
+These commands turn a folder of markdown notes into an **LLM Wiki vault** — a grounded knowledge base with a section-level FTS5 BM25 index (`vault.fts5.db`) — and operate on it. Run `init-vault` once; the rest work inside the vault, in roughly this lifecycle order.
+
+| Command | Description |
+|---------|-------------|
+| `/deep-thinking:init-vault [directory]` | Transform any folder of markdown files (or an empty folder) into an LLM Wiki vault in one shot — per-OS FTS5 trigram preflight, pipeline CLI install, `fts5-reindex.py` deployment, `_inbox/`/`_archive/`/`_answers/` scaffolding, `git init` + `.gitignore`, non-destructive CLAUDE.md vault protocol with command routing, and a BM25 smoke-query verification |
+| `/deep-thinking:ground {question}` | 5-stage pipeline (Discovery → Map → Pinpoint → Verify → Augment) that grounds answers in the local `.md` archive with mandatory `file:line` citations; web augmentation only for proven gaps |
+| `/deep-thinking:journal "{raw thoughts}"` | Turn a raw thought-dump into a clean, lineage-aware, ground-searchable entry in the monthly insight log — supports add, refine, promote, and review modes |
+| `/deep-thinking:schedule {path-or-directory}` | Create, refine, or audit schedule/calendar markdown into month-anchored, bookmark-style ground-truth indexes optimized for grounding, RAG retrieval, and chunk-based parsing instead of narrative-stuffed tables |
+| `/deep-thinking:deep-research {topic}` | Comprehensive multi-source research with 15+ searches, Reddit/news cross-validation, and Ki-Sho-Ten-Ketsu structured report — the primary way new long-form source documents enter the vault |
+| `/deep-thinking:lint [scope]` | Vault health check — report-only lint that audits contradictions, supersession lineage, broken links, frontmatter provenance, and index freshness without mutating a single vault file |
+| `/deep-thinking:save-answer` | Archive the previous grounded answer verbatim into `_answers/` — a quarantine folder permanently excluded from `/ground` and FTS5 indexing, so LLM-synthesized answers never feed back into LLM sources |
+
+### General Commands
+
+Standalone research, writing, and creative utilities — no vault required.
+
 | Command | Description |
 |---------|-------------|
 | `/deep-thinking:pulse {topic}` | Trend radar scanning 5+ subreddits and 75+ posts to identify hot issues before deep research |
-| `/deep-thinking:deep-research {topic}` | Comprehensive multi-source research with 15+ searches, Reddit/news cross-validation, and Ki-Sho-Ten-Ketsu structured report |
 | `/deep-thinking:forge-prompt {instruction}` | Create bulletproof instructions/skills with Iron Laws, anti-rationalization tables, and mandatory checklists |
 | `/deep-thinking:meeting-notes {transcript}` | Transform meeting transcripts into narrative-driven documentation with counterparty research and verified terminology |
 | `/deep-thinking:translate-kr {article}` | Transcreate English IT articles into native Korean with terminology verification and anti-translation-artifact rules |
 | `/deep-thinking:blog-cover {title and concept}` | Generate anti-AI-looking blog cover image prompts for Gemini Nano Banana Pro with visual metaphors and title typography |
 | `/deep-thinking:blog {topic or draft}` | 16-year veteran IT tech blogger framework — fact-based, source-cited content with mandatory bullet point formatting and inline hyperlinks |
-| `/deep-thinking:ground {question}` | 5-stage pipeline (Discovery → Map → Pinpoint → Verify → Augment) that grounds answers in the local `.md` archive with mandatory `file:line` citations; web augmentation only for proven gaps |
 | `/deep-thinking:writing-z-image-turbo-prompts {seed}` | Forge a Z-Image-Turbo (ZIT) photorealism prompt from any natural-language seed — outputs an sd-dynamic-prompts mustache template implementing the 90hex 11-slot doctrine (camera body + film stock + anti-AI 4-stack) |
 | `/deep-thinking:hidden-reality {idea or topic}` | Anti-optimization idea forge — suggests, verifies, or defends "Hidden Reality" software ideas against an 11-mechanism doctrine (imperfection, friction, anti-utility, defamiliarization, scale violation, etc.) with academic backbone (Tega Brain, 한병철, Shklovsky, Dunne & Raby) and a 2-week prototype scope |
-| `/deep-thinking:schedule {path-or-directory}` | Create, refine, or audit schedule/calendar markdown into month-anchored, bookmark-style ground-truth indexes optimized for grounding, RAG retrieval, and chunk-based parsing instead of narrative-stuffed tables |
-| `/deep-thinking:journal "{raw thoughts}"` | Turn a raw thought-dump into a clean, lineage-aware, ground-searchable entry in the monthly insight log — supports add, refine, promote, and review modes |
-| `/deep-thinking:init-vault [directory]` | Transform any folder of markdown files (or an empty folder) into an LLM Wiki vault in one shot — per-OS FTS5 trigram preflight, pipeline CLI install, `fts5-reindex.py` deployment, `_inbox/`/`_archive/`/`_answers/` scaffolding, `git init` + `.gitignore`, non-destructive CLAUDE.md vault protocol with command routing, and a BM25 smoke-query verification |
 
 ## Skills
 
@@ -100,19 +113,21 @@ Skills activate automatically when their trigger conditions match — no slash c
 
 | Command | Required | Optional |
 |---------|----------|----------|
-| `/deep-thinking:pulse` | Time, Brave Search, Reddit | - |
+| `/deep-thinking:init-vault` | None | - |
+| `/deep-thinking:ground` | None | Brave Search, Reddit, Fetch (Stage 5 gap-filling only) |
+| `/deep-thinking:journal` | Time | - |
+| `/deep-thinking:schedule` | None | - |
 | `/deep-thinking:deep-research` | Time, Brave Search, Reddit | - |
+| `/deep-thinking:lint` | None | - |
+| `/deep-thinking:save-answer` | None | - |
+| `/deep-thinking:pulse` | Time, Brave Search, Reddit | - |
 | `/deep-thinking:forge-prompt` | None | - |
 | `/deep-thinking:meeting-notes` | Time, Brave Search | Context7, Fetch |
 | `/deep-thinking:translate-kr` | Brave Search | - |
 | `/deep-thinking:blog-cover` | None | - |
 | `/deep-thinking:blog` | Time, Brave Search, Reddit | Fetch, Context7 |
-| `/deep-thinking:ground` | None | Brave Search, Reddit, Fetch (Stage 5 gap-filling only) |
 | `/deep-thinking:writing-z-image-turbo-prompts` | None | - |
 | `/deep-thinking:hidden-reality` | None | Brave Search (SCOUT mode for live 2025–2026 artifacts) |
-| `/deep-thinking:schedule` | None | - |
-| `/deep-thinking:journal` | Time | - |
-| `/deep-thinking:init-vault` | None | - |
 
 ### Quick MCP Setup
 
