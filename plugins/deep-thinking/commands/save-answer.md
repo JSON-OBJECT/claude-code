@@ -1,5 +1,5 @@
 ---
-description: Use when the user asks to save/preserve the previous answer ("이 답변 저장해", "이거 저장해", "save this answer", "이 답변 보관해") right after a grounded or researched answer — archives the question-answer pair VERBATIM as one md file in the vault's `_answers/` folder, which is permanently excluded from /ground and FTS5 indexing so LLM-synthesized answers never feed back into LLM sources
+description: Use when the user asks to save/preserve the previous answer ("이 답변 저장해", "이거 저장해", "save this answer", "이 답변 보관해") right after a grounded or researched answer — archives the question-answer pair VERBATIM as one md file in the vault's `_answers/` folder, which is permanently excluded from FTS5 indexing and /ground's default search (retrievable only on explicit user opt-in, as an `[A-crystal]` event record — never as topic evidence) so LLM-synthesized answers never feed back into LLM sources
 allowed-tools: Read, Write, Bash, Grep, Glob
 argument-hint: [optional slug override]
 ---
@@ -17,7 +17,8 @@ This implements the crystallization half of the wiki loop: good answers should n
 ```
 SAVE INTO _answers/ ONLY — SAVING INTO A TOPIC FOLDER POISONS THE GROUNDING CORPUS.
 THE ANSWER IS PRESERVED VERBATIM — NOT ONE CHARACTER OF Q OR A MAY CHANGE.
-NEVER INDEX, NEVER PROMOTE — _answers/ IS PERMANENTLY OUTSIDE /ground.
+NEVER INDEX, NEVER PROMOTE — _answers/ IS OUTSIDE /ground's DEFAULT SEARCH.
+OPT-IN RETRIEVAL IS EVENT-RECORD ONLY ([A-crystal]) — NEVER TOPIC EVIDENCE.
 ```
 
 **Empirical baseline (recorded before this command existed):** an unguided agent asked to "save this answer" saved it into a topic directory (`software-engineering/`), ran the FTS5 reindex and proudly verified the answer now ranked #1 in BM25 search, "corrected" the answer's citations in place before saving, committed without staging discipline, and closed by recommending promotion to `human_reviewed: true` so /ground could cite it as primary evidence — the complete cognitive-debt loop (LLM output re-ingested as LLM source), executed in a single well-meaning pass. Every gate below exists because that actually happened.
@@ -78,7 +79,7 @@ rg -n '"_answers"' fts5-reindex.py
 
 - Stage ONLY the new file: `git add _answers/<file>` (NEVER `git add -A` — other sessions may have work in flight).
 - Commit with a one-line message naming the question topic.
-- Report: saved path, filename, and one sentence reminding that this file is outside /ground by design (findable via `eza _answers/` or `rg` directly when the user wants to reread it).
+- Report: saved path, filename, and one sentence reminding that this file is outside /ground's default search by design — findable via `eza _answers/` or `rg` directly, or by explicitly asking /ground to `"include answers in search"` (retrieved as an `[A-crystal]` event record, never as topic evidence).
 
 ---
 
@@ -102,7 +103,7 @@ If you catch yourself thinking:
 
 | Excuse | Reality |
 |--------|---------|
-| "Making it searchable helps the user." | The user's explicit design goal is the opposite: LLM answers must never become LLM sources. /ground quality depends on this quarantine. |
+| "Making it searchable helps the user." | The user's explicit design goal is the opposite: LLM answers must never become LLM sources by default. The sanctioned path already exists — /ground's explicit opt-in retrieves crystals as `[A-crystal]` event records. Indexing adds nothing but poisoning risk. |
 | "It cites real files, so it's as good as a source." | It is synthesis OVER sources. Citing it later means citing your own output as evidence — compounding hallucination with a provenance costume. |
 | "Fixing the citation line numbers improves the record." | It silently changes what the user approved. If a citation is wrong, that's worth MENTIONING in the report — never editing into the saved text. |
 | "This answer is so good it belongs in the topic folder." | Quality is not provenance. However good, it remains unreviewed LLM output; topic folders are for curated knowledge. |
@@ -124,7 +125,7 @@ If you catch yourself thinking:
 
 ## Key Principles
 
-- **Crystals are keepsakes, not sources.** The human rereads them; the machine never retrieves them.
+- **Crystals are keepsakes, not sources.** The human rereads them; the machine retrieves them only on explicit user opt-in, and then only as `[A-crystal]` event records ("this was answered on that date") — never as evidence about the topic.
 - **Photocopy, don't distill.** The value is "exactly what I was told that day" — the opposite of journal distillation.
 - **Quarantine is structural.** The folder exclusion (fts5-reindex.py `EXCLUDE_DIRS` + /ground Stage 1) does the enforcement; no flag or good intention substitutes for it.
 - **Date in filename.** A Q&A pair is a fixed event; `YYYY-MM-DD-` prefix follows the vault's filename convention.
@@ -135,7 +136,7 @@ If you catch yourself thinking:
 ## Integration with Other Instructions
 
 - **`fts5-reindex.py`** — `"_answers"` MUST remain in `EXCLUDE_DIRS`; Step 3 verifies on every run.
-- **`/ground`** — Stage 1 default-excludes `_answers/` alongside `_inbox/` and `_archive/`; crystallized answers are never citable at any stage.
+- **`/ground`** — Stage 1 default-excludes `_answers/` alongside `_inbox/` and `_archive/`. On explicit user opt-in (`"include answers in search"` / `"답변 포함해서 검색"`), /ground searches the folder via `Glob`/`Grep` (never the FTS5 index) and cites hits as `[A-crystal]` event records only — crystallized answers are never citable as topic evidence at any stage.
 - **`/lint`** — mechanical link checks skip `_answers/` (its citation strings reference vault files as text, not as live links to validate).
 - **`_answers/README.md`** in the vault documents the convention for human readers.
 
