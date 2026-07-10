@@ -158,7 +158,7 @@ Maturity markers (greppable pipeline — `rg '🌿' journal/` surfaces promotion
 2. **Same-day same-subject merge gate (NON-NEGOTIABLE).** Before appending, scan the month file's existing `### ` headings for the target date. If a chapter for the **same event/topic already exists** — typical when the user journals several times during one session — **absorb the new material into it** (refine semantics): add/extend labeled facet bullets, update the title if the verdict evolved, and atomically update the TOC anchor plus **every cross-ref to that anchor vault-wide** (`rg -n 'journal-YYYY-MM.md#<old-anchor>' -g '*.md'` — other months, schedules, and topic docs may link in; a title change with a stale referrer left behind is a broken link you created). Append a NEW chapter only for a genuinely different subject. `cf.` links connect different dates/subjects; they are NOT a substitute for merging.
 3. **Append each decoded entry** as a `### YYYY-MM-DD — title` section, sorted ascending. Same date, multiple genuinely distinct subjects (each passing the Title Test) → multiple H3 entries.
 4. **Update the `## Index` TOC** with an anchor line per new entry.
-5. **Frontmatter provenance is NON-NEGOTIABLE:** `generated_by: human` + `human_reviewed: true`.
+5. **Frontmatter provenance is NON-NEGOTIABLE:** `generated_by: human` + `human_reviewed: true`. Also refresh the OKF `timestamp` field to the current ISO 8601 datetime — every entry added is a meaningful change.
    - The insight is the user's; you only transcribed and filed it. It must be citable as a **primary `[H]` source** and must pass `/ground`'s `human_reviewed != 'false'` filter. `generated_by: claude-*` / `human_reviewed: false` would make the user's own journal **invisible and untrusted** to grounding — a catastrophic failure.
    - This provenance is honest ONLY because you obeyed the Iron Law (transcribe, don't synthesize). The moment you inject your own claims, this frontmatter becomes a lie. Don't.
 
@@ -258,6 +258,7 @@ Substance = Insight · Reasoning · So-what (3 bullets, the user's own). Scaffol
 name: 2026-06 — Insight Journal
 description: Chronological capture log of insights/realizations during 2026-06. Matured insights graduate to topic-dir canonical docs; pointers remain here.
 type: journal-log
+timestamp: 2026-06-07T21:00:00+09:00
 generated_by: human
 human_reviewed: true
 generated_at: 2026-06-07

@@ -142,8 +142,10 @@ This directory is an LLM Wiki vault. For EVERY question about this vault's topic
 
 ### Frontmatter Contract
 
-- Files synthesized by an LLM MUST carry `generated_by: <model>` and `human_reviewed: false` until a human reviews them. Unreviewed synthesis is never primary evidence.
+- EVERY new `.md` file (outside `_inbox/`, `_archive/`, `_answers/`) MUST open with a YAML frontmatter block carrying the OKF trio (Google Cloud Open Knowledge Format v0.1): `type` (short kind string — reuse existing values such as deep-research, canon, playbook, journal-log, schedule-index, guide, report, index, note), `description` (one-line summary, ~40–140 chars, quoted), and `timestamp` (ISO 8601 of last meaningful change — update it when meaningfully editing).
+- Files synthesized by an LLM MUST additionally carry `generated_by: <model>` and `human_reviewed: false` until a human reviews them. Unreviewed synthesis is never primary evidence.
 - Knowledge lineage uses paired fields: the new canon gets `supersedes: <older>.md`, the stale file gets `superseded_by: <newer>.md`. Superseded files are excluded from grounding but never deleted.
+- NEVER create `log.md` or any manual changelog file — git history is the vault's change log.
 ```
 
 ### Stage 5 — Build Index & Prove It Works

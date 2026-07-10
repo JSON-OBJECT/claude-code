@@ -32,6 +32,8 @@ With `autoUpdate: true` on the marketplace (default), refresh also happens autom
 
 These commands turn a folder of markdown notes into an **LLM Wiki vault** — a grounded knowledge base with a section-level FTS5 BM25 index (`vault.fts5.db`) — and operate on it. Run `init-vault` once; the rest work inside the vault, in roughly this lifecycle order.
 
+Vault frontmatter follows an **OKF-compatible contract** ([Google Cloud Open Knowledge Format v0.1](https://github.com/GoogleCloudPlatform/knowledge-catalog/blob/main/okf/SPEC.md)): every concept file carries `type` / `description` / `timestamp`, with the pipeline's provenance keys (`generated_by`, `human_reviewed`, `supersedes`, `superseded_by`) as OKF extension keys. `fts5-reindex.py` indexes the trio — `type`/`timestamp` as filterable columns, `description` as a searchable column — so `/ground` can filter by document kind and match curated summaries.
+
 | Command | Description |
 |---------|-------------|
 | `/deep-thinking:init-vault [directory]` | Transform any folder of markdown files (or an empty folder) into an LLM Wiki vault in one shot — per-OS FTS5 trigram preflight, pipeline CLI install, `fts5-reindex.py` deployment, `_inbox/`/`_archive/`/`_answers/` scaffolding, `git init` + `.gitignore`, non-destructive CLAUDE.md vault protocol with command routing, and a BM25 smoke-query verification |

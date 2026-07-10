@@ -623,6 +623,9 @@ The very first lines of every output `.md` file MUST be a YAML frontmatter block
 
 ```yaml
 ---
+type: deep-research
+description: "One-line summary of what this report covers and what it is for."
+timestamp: 2026-04-27T21:00:00+09:00
 generated_by: claude-opus-4-7
 human_reviewed: false
 generated_at: 2026-04-27
@@ -633,12 +636,15 @@ aliases: []
 ---
 ```
 
-The block follows Obsidian frontmatter conventions — `tags` and `aliases` are read by Obsidian for graph/search; the provenance fields are read by `/ground` Stage 4. Both coexist in one block.
+The block follows Obsidian frontmatter conventions — `tags` and `aliases` are read by Obsidian for graph/search; the provenance fields are read by `/ground` Stage 4. The `type`/`description`/`timestamp` trio implements the OKF frontmatter contract (Google Cloud Open Knowledge Format v0.1); the remaining keys are OKF extension keys. All coexist in one block.
 
 **Field rules:**
 
 | Field | Value | How to obtain |
 |-------|-------|---------------|
+| `type` | `deep-research` — the OKF kind string for this command's output | Fixed value |
+| `description` | One-line summary (target 40–140 chars, in the report's language) of what the report covers and what it is for | Write it AFTER the body is final — it must describe the actual content. Quote the value; unquoted colons break YAML. |
+| `timestamp` | ISO 8601 datetime of this generation (or of this refinement pass) | From `mcp__time__get_current_time` — update on every meaningful change |
 | `generated_by` | Exact model ID currently executing (e.g., `claude-opus-4-7`, `claude-sonnet-4-6`, `claude-haiku-4-5`) | Read from system context — never guess or omit |
 | `human_reviewed` | `false` — always, at generation time | The agent NEVER flips this to `true`. Only a human does, after reading. |
 | `generated_at` | Today's date as `YYYY-MM-DD` | From `mcp__time__get_current_time` — real time, never approximate |
@@ -700,7 +706,7 @@ BEFORE writing the report:
 7. CONFIRM: All checklist items below are checked?
    → If any unchecked: STOP. Complete before writing.
 
-8. FRONTMATTER: Have you prepared the provenance block (generated_by, human_reviewed: false, generated_at, research_searches, sub_agents_dispatched)?
+8. FRONTMATTER: Have you prepared the provenance block (type: deep-research, description, timestamp, generated_by, human_reviewed: false, generated_at, research_searches, sub_agents_dispatched)?
    → If missing: STOP. /ground Stage 4 cannot gate this file without it. Refinement Mode: did you reset human_reviewed to false?
 
 Starting to write before completing the checklist = lying to yourself, not efficiency.
@@ -772,6 +778,8 @@ Before you start writing the report, verify you have completed:
 
 ### Frontmatter Contract Checklist
 - [ ] **Provenance block is the very first content** of the output file (no blank lines or prose before it)
+- [ ] **`type: deep-research`** and a quoted one-line **`description`** written after the body was finalized
+- [ ] **`timestamp`** holds this run's ISO 8601 datetime from `mcp__time__get_current_time`
 - [ ] **`generated_by`** holds the actual current model ID (not a placeholder, not a guess)
 - [ ] **`human_reviewed: false`** — agent NEVER sets this to `true`
 - [ ] **`generated_at`** uses today's date from `mcp__time__get_current_time` (not a hallucinated date)

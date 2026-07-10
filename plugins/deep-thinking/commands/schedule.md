@@ -85,6 +85,17 @@ That is the entire entry. Six lines. If you want to know *why* the release was a
 ## Anatomy of a Compliant File
 
 ```markdown
+---
+name: YYYY — [Domain] Schedule Index
+description: Chronological bookmark index of [domain] events for YYYY. Pointers + primary-source cross-refs only; narrative lives in source-of-truth docs.
+type: schedule-index
+timestamp: YYYY-MM-DDT00:00:00+09:00
+generated_by: human
+human_reviewed: true
+tags: [schedule, calendar, index, YYYY]
+aliases: []
+---
+
 # YYYY [Domain] Index
 
 > **Role:** Calendar · Bookmark · Anchor. Pointers + 1st-source cross-refs only.
@@ -161,7 +172,7 @@ grep -c '^## ' <target>                               # H2 anchors (month/catego
 Flag every issue found. Common findings:
 - Longest line > 500 chars → "big cell narrative" anti-pattern
 - H3 anchor count of 0 → no event-level bookmarks
-- Frontmatter > 5 lines → update history accumulating in header (belongs in git)
+- Frontmatter keys beyond the standard contract (`name`, `description`, `type`, `timestamp`, `generated_by`, `human_reviewed`, `tags`, `aliases`) → update history accumulating in header (belongs in git). Refresh `timestamp` on every meaningful edit; never append dated history lines.
 - Same event found via `grep` in multiple sibling files → duplication drift
 
 Report these findings to the human partner BEFORE proposing edits. In `audit` mode, stop here and output the diagnostic.

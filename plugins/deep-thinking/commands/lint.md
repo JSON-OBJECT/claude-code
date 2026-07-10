@@ -40,13 +40,20 @@ NEVER READ _inbox/ CONTENTS — metadata (count, age) only.
 
 ### Stage 1 — Mechanical Checks (deterministic, zero LLM judgment)
 
-**GATE: Run ALL five checks via the provided one-liners. Do NOT hand-write ad-hoc scan scripts when the FTS5 DB already carries the metadata.**
+**GATE: Run ALL six checks via the provided one-liners. Do NOT hand-write ad-hoc scan scripts when the FTS5 DB already carries the metadata.**
 
 1. **Frontmatter contract violations** — LLM-synthesized files missing the review flag:
    ```bash
    sqlite3 vault.fts5.db "SELECT DISTINCT rel_path FROM notes_fts
      WHERE generated_by != '' AND human_reviewed = '';"
    ```
+
+1b. **OKF trio gaps** — files missing `type`, `description`, or `timestamp` (Warning severity; the vault's root `CLAUDE.md` is exempt — it is an instruction file, not a concept):
+   ```bash
+   sqlite3 vault.fts5.db "SELECT DISTINCT rel_path FROM notes_fts
+     WHERE type = '' OR description = '' OR timestamp = '';"
+   ```
+   If this errors with `no such column: type`, the DB was built by a pre-v3 `fts5-reindex.py` — report a single finding ("index schema outdated — refresh fts5-reindex.py from the plugin and rebuild") instead of per-file gaps.
 
 2. **Supersession lineage integrity** — dangling pointers and one-way links:
    ```bash

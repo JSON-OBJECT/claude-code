@@ -41,6 +41,20 @@
 # excludes superseded rows by default (`AND superseded_by = ''`), and
 # Stage 4 refuses to cite a superseded file as primary evidence.
 #
+# OKF frontmatter (v3)
+# --------------------
+# Vaults following the OKF-compatible frontmatter contract (Google
+# Cloud Open Knowledge Format v0.1: type / description / timestamp)
+# get three more columns:
+# - `type` and `timestamp` are filterable UNINDEXED columns, enabling
+#   question-type-aware Stage 1 filtering (e.g. AND type = 'deep-research').
+# - `description` is a *searchable* column so BM25 can match the curated
+#   one-line summary. It is populated only on the file's FIRST section
+#   row — repeating it on every section row would let one description
+#   match N times and skew ranking.
+# Files without these keys index normally (empty strings) — the columns
+# are additive, never a gate.
+#
 # =============================================================================
 # Installation — Homebrew, unified across macOS / Linux / WSL2
 # =============================================================================
@@ -115,6 +129,16 @@
 #       AND superseded_by = ''
 #     ORDER BY score LIMIT 10;"
 #
+# Example: filter by OKF type (interpretive question → canon docs first):
+#
+#   sqlite3 vault.fts5.db -separator $'\t' "
+#     SELECT rel_path, heading, start_line, bm25(notes_fts) AS score
+#     FROM notes_fts
+#     WHERE notes_fts MATCH '\"키워드\"'
+#       AND type IN ('canon', 'doctrine-canon')
+#       AND superseded_by = ''
+#     ORDER BY score LIMIT 10;"
+#
 # =============================================================================
 
 import re
@@ -131,6 +155,7 @@ DB_PATH = VAULT / "vault.fts5.db"
 EXCLUDE_DIRS = {
     "_inbox",       # Web Clipper, unreviewed — never cite
     "_archive",     # Explicit graveyard — not an active search target
+    "_answers",     # Crystallized Q&A pairs — LLM output, NEVER a grounding source
     ".git",
     ".claude",
     ".obsidian",
@@ -140,7 +165,10 @@ EXCLUDE_DIRS = {
 
 # ----- Frontmatter parser -----
 FM_RE = re.compile(r"\A---\n(.*?)\n---\n", re.DOTALL)
-FM_KEYS = ("generated_by", "human_reviewed", "supersedes", "superseded_by")
+FM_KEYS = (
+    "generated_by", "human_reviewed", "supersedes", "superseded_by",
+    "type", "description", "timestamp",
+)
 
 try:
     import yaml  # type: ignore
@@ -288,6 +316,9 @@ def main():
             human_reviewed UNINDEXED,
             supersedes UNINDEXED,
             superseded_by UNINDEXED,
+            type UNINDEXED,
+            timestamp UNINDEXED,
+            description,
             body,
             tokenize = 'trigram'
         );
@@ -322,17 +353,26 @@ def main():
             fm_str(meta, "human_reviewed"),
             fm_str(meta, "supersedes"),
             fm_str(meta, "superseded_by"),
+            fm_str(meta, "type"),
+            fm_str(meta, "timestamp"),
         )
-        for heading, start_line, end_line, body in split_sections(text):
-            rows.append(common + (heading, start_line, end_line) + tail + (body,))
+        description = fm_str(meta, "description")
+        for n_sec, (heading, start_line, end_line, body) in enumerate(
+            split_sections(text)
+        ):
+            # description rides only on the first section row (see header)
+            desc_col = description if n_sec == 0 else ""
+            rows.append(
+                common + (heading, start_line, end_line) + tail + (desc_col, body)
+            )
 
     with con:
         con.executemany(
             "INSERT INTO notes_fts"
             "(path, rel_path, heading, start_line, end_line,"
             " mtime, size, generated_by, human_reviewed,"
-            " supersedes, superseded_by, body)"
-            " VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+            " supersedes, superseded_by, type, timestamp, description, body)"
+            " VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
             rows,
         )
 
