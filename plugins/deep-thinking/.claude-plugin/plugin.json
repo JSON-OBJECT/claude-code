@@ -1,7 +1,7 @@
 {
   "name": "deep-thinking",
-  "description": "Deep research, prompt forging, meeting notes, trend analysis, blog writing, local markdown grounding, one-command LLM Wiki vault initialization, vault health linting, answer saving, schedule indexing, journaling, Hidden Reality anti-optimization idea forging, Game Juice game-feel UI, and elegiac film-score music prompt forging commands and skills",
-  "version": "1.16.0",
+  "description": "Deep research, prompt forging, meeting notes, trend analysis, blog writing, local markdown grounding, one-command LLM Wiki vault initialization, vault health linting, answer saving, schedule indexing, journaling, Hidden Reality anti-optimization idea forging, Game Juice game-feel UI, Cozy Refuge mood reproduction, and elegiac film-score music prompt forging commands and skills",
+  "version": "1.17.0",
   "author": {
     "name": "Taehyeong Lee",
     "email": "jsonobject@gmail.com"
@@ -37,6 +37,14 @@
     "game-feel",
     "juicy-ui",
     "gsap",
+    "cozy-refuge",
+    "cozy",
+    "lofi",
+    "ambience",
+    "soundscape",
+    "cozy-apocalypse",
+    "iyashikei",
+    "mood-design",
     "music-prompt",
     "text-to-music",
     "suno",

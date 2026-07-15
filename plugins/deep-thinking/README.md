@@ -66,6 +66,7 @@ Skills activate automatically when their trigger conditions match — no slash c
 | Skill | Description |
 |-------|-------------|
 | `game-juice` | Build or polish browser UI that FEELS like a Japanese gacha/casual mobile game — damage numbers, hit impact, screen shake, springy buttons, combos. Treats juice as FEEDBACK (not decoration), enforces earned-juice restraint to avoid the generic AI-mass-produced feel, and orchestrates `impeccable` (visuals) + `gsap` skills (animation) with canon-anchored parameters |
+| `cozy-refuge` | Create content that feels like a warm refuge — lo-fi girl vibes, Ghibli-esque everyday peace, rainy-window rooms, ambience loops, cozy apocalypse (終末日常系) — in any medium (image prompts, web UI, video, soundscapes, copy). Three axioms (safety-abundance-softness fantasy / semi-permeable membrane / ma 間), six fully-specified modes, verified audio numbers (BPM · swing · LUFS), a 10-question QA gate, and anti-patterns blocking liminal-space drift, AI-slop clichés, and streak/obligation reinvention |
 
 ## Usage Examples
 
