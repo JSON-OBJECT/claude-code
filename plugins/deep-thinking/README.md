@@ -32,7 +32,9 @@ With `autoUpdate: true` on the marketplace (default), refresh also happens autom
 
 These commands turn a folder of markdown notes into an **LLM Wiki vault** — a grounded knowledge base with a section-level FTS5 BM25 index (`vault.fts5.db`) — and operate on it. Run `init-vault` once; the rest work inside the vault, in roughly this lifecycle order.
 
-Vault frontmatter follows an **OKF-compatible contract** ([Google Cloud Open Knowledge Format v0.1](https://github.com/GoogleCloudPlatform/knowledge-catalog/blob/main/okf/SPEC.md)): every concept file carries `type` / `description` / `timestamp`, with the pipeline's provenance keys (`generated_by`, `human_reviewed`, `supersedes`, `superseded_by`) as OKF extension keys. `fts5-reindex.py` indexes the trio — `type`/`timestamp` as filterable columns, `description` as a searchable column — so `/ground` can filter by document kind and match curated summaries.
+Vault frontmatter follows an **OKF-compatible contract** ([Google Cloud Open Knowledge Format](https://github.com/GoogleCloudPlatform/knowledge-catalog/blob/main/okf/SPEC.md)): every concept file carries the v0.1 required trio `type` / `description` / `timestamp`, plus two optional v0.2 keys — `stale_after` (re-verify-after date) and `status` (`draft`/`stable`/`deprecated`) — with the pipeline's provenance keys (`generated_by`, `human_reviewed`, `supersedes`, `superseded_by`) as OKF extension keys. `fts5-reindex.py` indexes all five — `type`/`timestamp`/`stale_after`/`status` as filterable columns, `description` as a searchable column — so `/ground` can filter by document kind, drop retired documents, and match curated summaries.
+
+`stale_after` exists to keep review finite: `human_reviewed: false` never expires and therefore only accumulates, while a date turns the backlog into a queue you can actually work — review what expired, not everything.
 
 | Command | Description |
 |---------|-------------|
@@ -192,6 +194,8 @@ python3 fts5-reindex.py
 ```
 
 Re-run after major edits to refresh the index. If `vault.fts5.db` is absent or stale, Stage 1 transparently falls back to `rg`/`Grep` — the index is purely an acceleration layer.
+
+**The reindex is also the vault's lint pass.** Because the run already reads every file and parses every frontmatter block, it prints a `[contract]` report on stderr for free — frontmatter gaps, `human_reviewed: false` counts, expired `stale_after`, `status: deprecated`, off-contract `type` values, and oversized files (per the `/ground` context-budget table). It is report-only: it never edits a file and never fails the run. Deterministic counting costs zero tokens and returns the same numbers on every OS, so judgment work — contradictions, semantic duplicates, claims that rotted inside a file that has not expired yet — is left to `/deep-thinking:lint` and the agent. Adopt a wider `type` vocabulary without editing the script: `OKF_TYPES="a,b,c" python3 fts5-reindex.py`.
 
 The optional Stage 5 MCP servers (Brave Search, Reddit, Fetch) are already covered in **Quick MCP Setup** above — no ground-specific MCP is required.
 

@@ -55,6 +55,38 @@
 # Files without these keys index normally (empty strings) — the columns
 # are additive, never a gate.
 #
+# OKF v0.2 freshness + lifecycle (v4)
+# -----------------------------------
+# Two more optional frontmatter keys, indexed as filterable columns:
+#
+#   stale_after: 2027-01-31      # re-verify after this date
+#   status: draft|stable|deprecated   # absent == stable
+#
+# `stale_after` turns review from an all-or-nothing backlog (every
+# `human_reviewed: false` file, forever) into a dated queue: only what
+# expired needs attention. `status: deprecated` lets a retired document
+# announce itself in one line instead of forcing /ground to infer
+# lifecycle from filenames. Both are opt-in; absent means "no expiry"
+# and "stable" respectively, so existing vaults are unaffected.
+#
+# The contract report (v4)
+# ------------------------
+# The reindex already walks every file and parses every frontmatter
+# block, so every countable contract violation is free at that point.
+# Rather than spend agent tokens re-deriving them, the run prints a
+# `[contract]` block to stderr: frontmatter gaps, unreviewed synthesis,
+# expired `stale_after`, deprecated files, off-contract `type` values,
+# and oversized files (per the /ground context-budget table). This is
+# the vault's lint pass — deterministic, ~0 tokens, same numbers on
+# every OS. It is REPORT-ONLY: it never edits a file and never fails
+# the run. Judgment work (contradictions, semantic duplicates, stale
+# *claims* inside a fresh file) stays with the agent.
+#
+# `OKF_TYPES` env var overrides the advisory type vocabulary without
+# editing this file:
+#
+#   OKF_TYPES="deep-research,canon,playbook,my-own-type" python3 fts5-reindex.py
+#
 # =============================================================================
 # Installation — Homebrew, unified across macOS / Linux / WSL2
 # =============================================================================
@@ -117,7 +149,12 @@
 #   python3 fts5-reindex.py
 #
 #   # Example output:
-#   #   Indexed 210 notes (1450 sections) in 4.2s → vault.fts5.db (31.7 MB)
+#   #   [OK] Indexed 210 notes (1450 sections, skipped 12 excluded)
+#   #        in 4.2s → vault.fts5.db (31.7 MB)
+#   #   [contract] frontmatter contract report (report-only)
+#   #       no parseable frontmatter: 3  (drafts/x.md, ...)
+#   #       human_reviewed:false (not primary evidence): 41  (...)
+#   #       stale_after expired (as of 2026-07-30): 2  (a.md (2026-06-30), ...)
 #
 # Example query (BM25 ranking, section-level):
 #
@@ -139,8 +176,20 @@
 #       AND superseded_by = ''
 #     ORDER BY score LIMIT 10;"
 #
+# Example: exclude retired documents and surface expiry (OKF v0.2):
+#
+#   sqlite3 vault.fts5.db -separator $'\t' "
+#     SELECT rel_path, heading, start_line, stale_after, bm25(notes_fts)
+#     FROM notes_fts
+#     WHERE notes_fts MATCH '\"키워드\"'
+#       AND status != 'deprecated'
+#       AND superseded_by = ''
+#     ORDER BY bm25(notes_fts) LIMIT 10;"
+#
 # =============================================================================
 
+import datetime
+import os
 import re
 import sqlite3
 import sys
@@ -150,6 +199,33 @@ from pathlib import Path
 # ----- Configuration -----
 VAULT = Path(__file__).resolve().parent
 DB_PATH = VAULT / "vault.fts5.db"
+
+# Advisory OKF `type` vocabulary for the contract report. Not enforced —
+# an off-contract value is reported, never rejected. Override without
+# editing this file: OKF_TYPES="a,b,c" python3 fts5-reindex.py
+OKF_TYPES = {
+    t.strip()
+    for t in (
+        os.environ.get("OKF_TYPES")
+        or "deep-research,canon,doctrine-canon,playbook,plan,journal-log,"
+           "schedule-index,meeting-notes,guide,report,living-tracker,"
+           "creative-work,index,note,crystallized-answer"
+    ).split(",")
+    if t.strip()
+}
+
+# Agent-schema files: indexed and searchable like any other file, but
+# exempt from the frontmatter findings. They configure the vault rather
+# than describing a concept, so they are not OKF concept files — and a
+# report that flags CLAUDE.md on every single run is a report the user
+# learns to skip.
+SCHEMA_FILES = {"CLAUDE.md", "AGENTS.md"}
+
+# Size thresholds for the contract report, mirroring the /ground
+# context-budget table: 80K chars ≈ 22K tokens (caution), 150K chars
+# ≈ 42K tokens (dangerous — Lost in the Middle on a cold read).
+SIZE_CAUTION_CHARS = 80_000
+SIZE_DANGER_CHARS = 150_000
 
 # Directories excluded from indexing (prompt-injection defense + noise removal)
 EXCLUDE_DIRS = {
@@ -167,7 +243,7 @@ EXCLUDE_DIRS = {
 FM_RE = re.compile(r"\A---\n(.*?)\n---\n", re.DOTALL)
 FM_KEYS = (
     "generated_by", "human_reviewed", "supersedes", "superseded_by",
-    "type", "description", "timestamp",
+    "type", "description", "timestamp", "stale_after", "status",
 )
 
 try:
@@ -210,6 +286,136 @@ def fm_str(meta: dict, key: str) -> str:
     if isinstance(val, list):
         return ", ".join(str(v) for v in val)
     return str(val) if val is not None else ""
+
+
+# ----- Contract report (deterministic lint, free during the walk) -----
+DATE_RE = re.compile(r"\s*(\d{4})-(\d{2})-(\d{2})")
+
+
+def parse_date(value: str):
+    """Extract a leading YYYY-MM-DD from a frontmatter value, else None.
+
+    PyYAML turns an unquoted `stale_after: 2027-01-31` into a date
+    object and a quoted one into a string; fm_str stringifies both with
+    the date leading, so one regex covers both parsers.
+    """
+    m = DATE_RE.match(value)
+    if not m:
+        return None
+    try:
+        return datetime.date(int(m.group(1)), int(m.group(2)), int(m.group(3)))
+    except ValueError:
+        return None
+
+
+class ContractAudit:
+    """Frontmatter-contract lint, collected during the index walk.
+
+    The reindex already reads every file and parses every frontmatter
+    block, so these counts cost nothing extra — and a deterministic
+    counter beats spending agent tokens re-deriving them, with the same
+    numbers on every OS and every run.
+
+    REPORT-ONLY by design: never edits a file, never fails the run,
+    never blocks the index. Only mechanically decidable facts live
+    here. Judgment work — contradictions, semantic duplicates, claims
+    that rotted inside a file that has not expired yet — stays with the
+    agent, where it belongs.
+    """
+
+    SAMPLE = 3  # offenders named per finding; the remainder is a count
+
+    def __init__(self, today=None):
+        self.today = today or datetime.date.today()
+        self.n_files = 0
+        self.no_frontmatter = []
+        self.missing_trio = []   # (rel, [missing keys])
+        self.unreviewed = []
+        self.expired = []        # (rel, date)
+        self.deprecated = []
+        self.off_contract = {}   # type value -> count
+        self.oversized = []      # (rel, chars), caution threshold and up
+
+    def inspect(self, rel, n_chars: int, meta: dict):
+        name = rel.name
+        rel = str(rel)
+        self.n_files += 1
+
+        if name in SCHEMA_FILES:
+            pass  # schema, not a concept — size still counts below
+        elif not meta:
+            # No frontmatter block, or one that failed to parse.
+            self.no_frontmatter.append(rel)
+        else:
+            missing = [k for k in ("type", "description", "timestamp")
+                       if not fm_str(meta, k)]
+            if missing:
+                self.missing_trio.append((rel, missing))
+
+            if fm_str(meta, "human_reviewed") == "false":
+                self.unreviewed.append(rel)
+
+            expiry = parse_date(fm_str(meta, "stale_after"))
+            if expiry and expiry < self.today:
+                self.expired.append((rel, expiry))
+
+            if fm_str(meta, "status") == "deprecated":
+                self.deprecated.append(rel)
+
+            kind = fm_str(meta, "type")
+            if kind and kind not in OKF_TYPES:
+                self.off_contract[kind] = self.off_contract.get(kind, 0) + 1
+
+        if n_chars >= SIZE_CAUTION_CHARS:
+            self.oversized.append((rel, n_chars))
+
+    def _line(self, out, label, items, render=str, note=""):
+        if not items:
+            return
+        shown = ", ".join(render(i) for i in items[: self.SAMPLE])
+        more = f", +{len(items) - self.SAMPLE} more" if len(items) > self.SAMPLE else ""
+        tail = f" — {note}" if note else ""
+        out.append(f"    {label}: {len(items)}  ({shown}{more}){tail}")
+
+    def report(self, stream=sys.stderr):
+        out = []
+
+        self._line(out, "no parseable frontmatter", sorted(self.no_frontmatter))
+        self._line(
+            out, "missing OKF trio",
+            sorted(self.missing_trio),
+            lambda t: f"{t[0]} [{'/'.join(t[1])}]",
+        )
+        self._line(out, "human_reviewed:false (not primary evidence)",
+                   sorted(self.unreviewed))
+        self._line(
+            out, f"stale_after expired (as of {self.today})",
+            sorted(self.expired, key=lambda t: t[1]),
+            lambda t: f"{t[0]} ({t[1]})",
+        )
+        self._line(out, "status:deprecated (excluded from grounding)",
+                   sorted(self.deprecated))
+        self._line(
+            out, "off-contract type values",
+            sorted(self.off_contract.items(), key=lambda t: -t[1]),
+            lambda t: f"{t[0]}×{t[1]}",
+        )
+
+        danger = [t for t in self.oversized if t[1] >= SIZE_DANGER_CHARS]
+        self._line(
+            out,
+            f"oversized ≥{SIZE_CAUTION_CHARS // 1000}K chars",
+            sorted(self.oversized, key=lambda t: -t[1]),
+            lambda t: f"{t[0]} ({t[1] // 1000}K)",
+            note=(f"{len(danger)} in the ≥{SIZE_DANGER_CHARS // 1000}K "
+                  f"cold-read danger tier" if danger else ""),
+        )
+
+        print("[contract] frontmatter contract report (report-only)", file=stream)
+        if out:
+            print("\n".join(out), file=stream)
+        else:
+            print("    clean — no countable contract violations", file=stream)
 
 
 # ----- Markdown section splitter -----
@@ -318,6 +524,8 @@ def main():
             superseded_by UNINDEXED,
             type UNINDEXED,
             timestamp UNINDEXED,
+            stale_after UNINDEXED,
+            status UNINDEXED,
             description,
             body,
             tokenize = 'trigram'
@@ -328,6 +536,7 @@ def main():
     rows = []
     n_files = 0
     skipped = 0
+    audit = ContractAudit()
 
     for f in VAULT.rglob("*.md"):
         if is_excluded(f):
@@ -355,8 +564,11 @@ def main():
             fm_str(meta, "superseded_by"),
             fm_str(meta, "type"),
             fm_str(meta, "timestamp"),
+            fm_str(meta, "stale_after"),
+            fm_str(meta, "status"),
         )
         description = fm_str(meta, "description")
+        audit.inspect(f.relative_to(VAULT), len(text), meta)
         for n_sec, (heading, start_line, end_line, body) in enumerate(
             split_sections(text)
         ):
@@ -371,8 +583,9 @@ def main():
             "INSERT INTO notes_fts"
             "(path, rel_path, heading, start_line, end_line,"
             " mtime, size, generated_by, human_reviewed,"
-            " supersedes, superseded_by, type, timestamp, description, body)"
-            " VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+            " supersedes, superseded_by, type, timestamp,"
+            " stale_after, status, description, body)"
+            " VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
             rows,
         )
 
@@ -388,6 +601,7 @@ def main():
         f"in {elapsed:.2f}s → {DB_PATH.name} ({db_mb:.1f} MB)",
         file=sys.stderr,
     )
+    audit.report()
 
 
 if __name__ == "__main__":

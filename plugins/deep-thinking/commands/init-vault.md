@@ -142,8 +142,10 @@ This directory is an LLM Wiki vault. For EVERY question about this vault's topic
 
 ### Frontmatter Contract
 
-- EVERY new `.md` file (outside `_inbox/`, `_archive/`, `_answers/`) MUST open with a YAML frontmatter block carrying the OKF trio (Google Cloud Open Knowledge Format v0.1): `type` (short kind string — reuse existing values such as deep-research, canon, playbook, journal-log, schedule-index, guide, report, index, note), `description` (one-line summary, ~40–140 chars, quoted), and `timestamp` (ISO 8601 of last meaningful change — update it when meaningfully editing).
+- EVERY new `.md` file (outside `_inbox/`, `_archive/`, `_answers/`) MUST open with a YAML frontmatter block carrying the OKF required trio (Google Cloud Open Knowledge Format v0.1): `type` (short kind string — reuse existing values such as deep-research, canon, playbook, journal-log, schedule-index, guide, report, index, note), `description` (one-line summary, ~40–140 chars, quoted), and `timestamp` (ISO 8601 of last meaningful change — update it when meaningfully editing).
 - Files synthesized by an LLM MUST additionally carry `generated_by: <model>` and `human_reviewed: false` until a human reviews them. Unreviewed synthesis is never primary evidence.
+- **Freshness — `stale_after: YYYY-MM-DD` (OKF v0.2, optional but recommended).** Any file whose claims decay (prices, contracts, org charts, tool versions, model rankings) SHOULD declare the date after which it needs re-verification. `python3 fts5-reindex.py` reports expired files on every run, and grounding treats an expired file as supporting context rather than settled fact. This exists so review is driven by expiry, not by an ever-growing `human_reviewed: false` backlog — **review what expired, not everything.**
+- **Lifecycle — `status: draft | stable | deprecated` (OKF v0.2, optional).** Absent means `stable`. `draft` marks agreed-but-unverified material (e.g. a plan awaiting first-hand verification); `deprecated` marks retired canon and is set on the stale file alongside `superseded_by`. Grounding excludes `deprecated` files by default, so lifecycle can be expressed in one line instead of inferred from filenames.
 - Knowledge lineage uses paired fields: the new canon gets `supersedes: <older>.md`, the stale file gets `superseded_by: <newer>.md`. Superseded files are excluded from grounding but never deleted.
 - NEVER create `log.md` or any manual changelog file — git history is the vault's change log.
 ```
@@ -152,7 +154,7 @@ This directory is an LLM Wiki vault. For EVERY question about this vault's topic
 
 **GATE: "The DB file exists" is not verification. A BM25 query returning a real section hit is.**
 
-1. Build: `cd <vault-root> && python3 fts5-reindex.py` — capture the `Indexed N notes (M sections)` line.
+1. Build: `cd <vault-root> && python3 fts5-reindex.py` — capture the `Indexed N notes (M sections)` line **and the `[contract]` report lines printed after it** (frontmatter gaps, unreviewed synthesis, expired `stale_after`, deprecated files, off-contract `type` values, oversized files). The reindex is also the vault's lint pass: everything countable is counted here, deterministically, at zero token cost.
 2. **Smoke query.** Pick a word that actually appears in an indexed file (≥3 characters — the trigram tokenizer needs 3+; pick from a heading or body you saw in Stage 0). Run the exact query shape `/ground` uses:
    ```bash
    sqlite3 vault.fts5.db -separator $'\t' "
@@ -171,7 +173,7 @@ Summarize in this order:
 1. **Environment** — OS, Python + SQLite versions, smoke-test result, pipeline CLIs checked / newly installed / still missing (with remedies).
 2. **Files created/modified** — script source used (plugin copy vs GitHub), folders scaffolded, git/.gitignore actions, CLAUDE.md action taken (created / appended / already-present-skipped).
 3. **Index** — `N notes / M sections`, DB size, smoke-query hit(s) shown verbatim.
-4. **Provenance flags** — if any indexed file carries `human_reviewed: false`, tell the user those files are excluded from primary-evidence grounding until promoted to `human_reviewed: true`.
+4. **Contract report** — relay the script's `[contract]` block verbatim. Explain only what is non-obvious: `human_reviewed: false` files are excluded from primary-evidence grounding until promoted; expired `stale_after` files are the review queue (work that list, not the whole `false` backlog); off-contract `type` values are drift, resolved either by renaming the file's type or — when the vault legitimately runs a wider vocabulary — by exporting `OKF_TYPES="a,b,c"` before the run (the list is advisory, and this keeps the script itself untouched per the Iron Law). Report counts — do NOT start fixing files unless the user asks.
 5. **Next steps** — make the first git commit if the repo has none (git history is the vault's change log), add notes, re-run `python3 fts5-reindex.py` after edits, try `/deep-thinking:ground <question>`.
 
 ---
