@@ -309,6 +309,31 @@ Executes a 5-stage pipeline (Discovery → Map → Pinpoint → Verify → Augme
 
 **Philosophy:** The curated `.md` corpus is ground truth. Web is a supplement for gaps only.
 
+**Verdict layer (optional).** If the vault root holds a `verdicts.md` hub, Stage 1 reads it *before* searching and stops there when a live verdict card already rules on the question — no re-research, no Stage 5. Past a card's `stale_after`, only its appeal conditions get re-checked, never the whole topic. No `verdicts.md` means the step is skipped and the pipeline runs unchanged. See `/deep-thinking:verdict` below.
+
+---
+
+#### `/deep-thinking:verdict [path or blank]` — Conclusion Distiller
+
+> **A verdict is a settled conclusion a future session obeys instead of re-researching.**
+
+**The problem it solves:** a session produces a genuinely good answer, and then ends before anyone files it. The reasoning evaporates, and the next session pays for the same investigation again. This inhales that answer into the wiki's brain before it evaporates — compressed into **verdict cards**: compact, binding rulings a later session acts on directly.
+
+Two sources, one skill — pass a path to an `_answers/` file saved earlier by `/deep-thinking:save-answer`, or leave it blank to distil the conversation you are in right now.
+
+Default summarising keeps the narrative and drops the numbers. This does the opposite: it carries every number, proper noun, version string, parameter value, price, rejected option with its reason, and recorded dissent — and leaves behind the research narrative that produced them.
+
+| Feature | What It Does |
+|---------|--------------|
+| **Two Sources** | An `_answers/` crystal from `save-answer`, or the live conversation when no path is given |
+| **Rejects Slot** | The highest-value slot per token — candidate, why it lost, what would reopen it. Without it the next session re-investigates every option the card never mentions |
+| **Appeal Slot** | Names the conditions that overturn the ruling, so an expired card needs three lines re-checked instead of a fresh investigation |
+| **Shelf Life, Not a Backlog** | `stale_after` is set from the card's fastest-decaying claim, turning review into a dated queue instead of an ever-growing `human_reviewed: false` list |
+| **Amend at Constant Size** | New facts land in slots the card already has — ruling rewritten, not appended — and every new card amends the existing cards it just contradicted |
+| **Retrieval-Aware by Construction** | Written against the FTS5 index: `path` is unindexed, headings are invisible, tags are searchable, and sub-3-character CJK tokens never match at all |
+
+**Philosophy:** Research is expensive and decays; a decision made from it should be paid for once. Deep research is the heavy axis and stays that way — the verdict layer is the fast one, the thing you reach for when the answer is already good and the only risk left is that it disappears. The card states the ruling and the conditions that would overturn it; how the deliberation went stays in the source it was distilled from.
+
 ---
 
 #### `/deep-thinking:writing-z-image-turbo-prompts {seed}` — ZIT Photorealism Forger
@@ -340,6 +365,7 @@ Transforms any natural-language seed (any language, any length) into an `sd-dyna
 | `/deep-thinking:blog-cover` | None | - |
 | `/deep-thinking:blog` | Time, Brave Search, Reddit | Fetch, Context7 |
 | `/deep-thinking:ground` | None | Brave Search, Reddit, Fetch (Stage 5 gap-filling only) |
+| `/deep-thinking:verdict` | None | - |
 | `/deep-thinking:writing-z-image-turbo-prompts` | None | - |
 
 ### Setup for `/deep-thinking:ground`

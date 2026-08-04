@@ -14,6 +14,7 @@ You are answering **"$ARGUMENTS"** using ONLY the local `.md` archive as primary
 
 ```
 NO ANSWER WITHOUT LOCAL .md SOURCE GROUNDING FIRST.
+NO RE-RESEARCH OF A QUESTION A LIVE VERDICT CARD HAS ALREADY RULED ON.
 NO FULL-FILE READ WITHOUT HEADING SCAN FIRST — CONTEXT IS A FINITE BUDGET.
 EVERY CLAIM MUST CITE file:line.
 ```
@@ -57,7 +58,33 @@ A 150K-char file consumes ~42K tokens — 4.2% of a 1M context window. Three suc
 
 **GATE: You cannot read anything until you know which files are candidates.**
 
-1. **Filename / path match** (cheapest, always first)
+0. **Settled-conclusion check — the verdict layer** (runs before everything, when the vault has one)
+
+   Some vaults keep a **verdict layer**: cards that record a decision already made, so a future session acts on it instead of re-deriving it. A card is identifiable by `tags:` containing `verdict` plus a declared `stale_after`. The layer has a root hub — `verdicts.md` — that lists every card, its ruling in one line, and its shelf life.
+
+   ```bash
+   ls verdicts.md 2>/dev/null && head -80 verdicts.md   # hub absent → skip step 0 entirely, go to step 1
+   ```
+
+   ```bash
+   sqlite3 vault.fts5.db -separator $'\t' "
+     SELECT rel_path, heading, start_line || '-' || end_line, stale_after
+     FROM notes_fts
+     WHERE notes_fts MATCH 'verdict AND (<topic keyword> OR <synonym>)'
+       AND status != 'deprecated' AND superseded_by = ''
+     ORDER BY bm25(notes_fts) LIMIT 5;"
+   ```
+
+   Then branch on shelf life:
+
+   - **A card covers the question and `stale_after` is in the future** → **that is the answer. Do not re-research and do not run Stage 5.** Read the card, answer from it, cite it. Say in the Grounding summary that a live verdict card short-circuited the pipeline and give its expiry date. Running a fresh investigation here does not just waste budget — it can silently contradict a ruling the user already accepted.
+   - **A card covers it but `stale_after` has passed** → do **not** re-investigate the whole topic. Open the card's *appeal* section (the "what would overturn this" slot) and check **only those conditions**, via Stage 5 if needed. That is the entire re-research surface of an expired card.
+   - **A card covers it but is `status: draft` / `human_reviewed: false`** → the Stage 1 content query below filters it out, so the **hub row is the only path to it.** Use the card as provisional context, flag it as unpromoted, and continue to the normal pipeline for corroboration.
+   - **No card covers it** → proceed to step 1 normally. If the session ends up doing real research, say so in the closing: this topic has no verdict card, and one could be minted.
+
+   **Why the hub exists and must be read, not just searched:** BM25 rewards term density, so a dense reference table can outrank the card that actually holds the ruling on the same subject. The hub is the deterministic backstop for that ranking failure — one read hands over the whole map.
+
+1. **Filename / path match** (cheapest full-corpus step)
    - Internal: `Glob` with `pattern="**/*<keyword>*.md"`
    - Shell: `fd -e md <keyword>`
    - **ALWAYS try multi-language variants in the same step:** e.g., a drug's brand name / its Korean transliteration / its generic chemical name. Empirical: EN+KR+generic-name triple search expanded 4→8 files in testing.
@@ -184,7 +211,7 @@ Every claim in your final answer MUST be traceable to a `file:line` from this st
 
 ### Structure your answer as:
 
-1. **Grounding summary**: Which files were found (Glob/Grep counts), which sections were relevant
+1. **Grounding summary**: Whether the verdict layer short-circuited the pipeline (name the card and its `stale_after`), which files were found (Glob/Grep counts), which sections were relevant
 2. **Answer**: The substantive answer with inline `file:line` citations for every claim
 3. **Sources**: List all cited `file:line` references at the end
 
@@ -196,6 +223,7 @@ Mark every citation with provenance so the reader (and future you) can distingui
 > `[A-reviewed] filename.md:123` — LLM-synthesized but human-reviewed (`generated_by: claude-*`, `human_reviewed: true`)
 > `[A-unreviewed] filename.md:123` — LLM-synthesized, NOT yet reviewed — supporting context only, never as primary evidence
 > `[A-crystal] _answers/filename.md:123` — crystallized past answer, retrieved ONLY on explicit user opt-in — an **event record** ("this was answered on that date"), never evidence about the topic itself
+> `[V] filename.md:123 (stale_after: YYYY-MM-DD)` — verdict card: a settled ruling, binding within its shelf life. Always carry the expiry date inline so the reader can see how long the answer is good for. Past expiry, mark it `[V-expired]` and state which appeal conditions were re-checked.
 
 If `[A-unreviewed]` appears in the Sources list, the Grounding summary MUST flag *"This answer references unreviewed synthesis notes as supporting context only — they cannot be cited as primary sources until promoted to `human_reviewed: true`."*
 
@@ -234,6 +262,8 @@ File reads consume **~96% of context** in typical sessions. The 5 Stages exist t
 
 If you catch yourself thinking:
 
+- "There's a verdict card on this, but let me verify it from the web first." — Inside its shelf life, that is the re-research the card exists to prevent. Verification already happened; `stale_after` is when it expires.
+- "The verdict card is expired, so I'll investigate the topic from scratch." — Expiry re-opens the card's *appeal conditions*, not the whole topic.
 - "I already know this brand/item, I'll just answer."
 - "It's faster to search the web than grep the repo."
 - "The user only wants a quick opinion."
@@ -261,6 +291,9 @@ If you catch yourself thinking:
 | Excuse | Reality |
 |--------|---------|
 | "The local archive probably doesn't have this." | You have not run `Glob`/`Grep` yet. "Probably" is not evidence. Run Stage 1 first; absence must be proven, not assumed. |
+| "I'll search the corpus first and check `verdicts.md` afterward if I need it." | Backwards. The hub is a short-circuit — checking it after you have already read five files spends exactly the budget it was built to save. |
+| "The verdict card is short, so it can't be the whole answer." | Brevity is the format, not a gap. The card carries the ruling, the rejects, and the appeal conditions; the deliberation lives in the source it was distilled from. Length is not evidence of completeness. |
+| "The card's ruling and a fresh web result disagree — the web is newer, so it wins." | Only if the card is expired or one of its stated appeal conditions has fired. Otherwise you are re-litigating a settled decision on one search result. Report the conflict as an appeal trigger; do not silently overwrite the ruling. |
 | "The file is 2,000 lines — too big to use." | That is exactly why Stage 2 exists. `mq '.h2'` takes milliseconds and turns 2,000 lines into a 10-line map. |
 | "Web search will be more current." | Currency is Stage 5, not Stage 1. The user's curated take is the baseline; web only fills gaps. |
 | "I remember what's in that file from a prior session." | Memories decay; files change. Re-`Grep`. Citations without re-verification are hallucinations with line numbers. |
@@ -295,6 +328,7 @@ If you catch yourself thinking:
 | Stage | Activity | Primary Tool | Shell Fallback | Success Criterion |
 |-------|----------|-------------|----------------|-------------------|
 | **0. Awareness** | Choose tool layer | — | — | Internal tools chosen unless pipeline needed |
+| **1.0 Verdict** | Check the settled-conclusion layer before searching | `ls verdicts.md`, `Read` hub, FTS5 `MATCH 'verdict AND <topic>'` | — | Live card → answer from it, skip Stages 2–5; expired card → check only its appeal conditions; no card → continue |
 | **1. Discovery** | Narrow + rank candidate SECTIONS (multi-lang, synonym-expanded) | `Glob`, **`sqlite3 vault.fts5.db ... ORDER BY bm25`** (section rows: `rel_path + heading + line range`; superseded + deprecated excluded), `Grep` fallback | `fd -e md`, `rg -l -t md` | Sections produced + BM25-ranked; query expanded on all four axes (language / register / specificity / abbreviation) before declaring thin results; `_inbox`/`_archive`/`_answers` excluded by default (explicit opt-in only; `_answers` → `[A-crystal]` event record); ≥5 → Explore delegation |
 | **2. Map** | Heading scan of long files (skippable per-hit when Stage 1 returned the section) | `Grep ^#{1,3}\s` | **`mq '.h2'`** (preferred), `rg -n '^#{1,3}\s'` | Section line ranges identified |
 | **3. Pinpoint** | Extract cited context | `Grep -n -C 5` | `rg -n -C 5` | `file:line` citations captured |
@@ -305,13 +339,14 @@ If you catch yourself thinking:
 
 ## Golden One-Liner
 
-> **`Glob` → `FTS5 BM25` (section hits: `file + heading + lines`; or `Grep` fallback) → `mq` (headings, when Stage 1 didn't already map the hit) → `Grep -n -C` (context) → `Read` + frontmatter/supersession gate → `glow` (verify) → web only for gaps.**
-> Narrow → Rank → Map → Pinpoint → Verify (provenance!) → Augment. Never reverse the order.
+> **`verdicts.md` (settled? stop) → `Glob` → `FTS5 BM25` (section hits: `file + heading + lines`; or `Grep` fallback) → `mq` (headings, when Stage 1 didn't already map the hit) → `Grep -n -C` (context) → `Read` + frontmatter/supersession gate → `glow` (verify) → web only for gaps.**
+> Settled? → Narrow → Rank → Map → Pinpoint → Verify (provenance!) → Augment. Never reverse the order.
 
 ---
 
 ## Key Principles
 
+- **Settled first, search second.** A live verdict card is a decision the user already paid for. Re-deriving it is not diligence — it is spending budget to risk contradicting yourself. Expiry re-opens the appeal conditions, not the topic.
 - **Local first, web last.** The curated `.md` corpus is the ground truth; the web is a supplement.
 - **Prove absence before assuming it.** "I didn't find it" requires a Stage 1 search with multi-language variants, not a hunch.
 - **Map before reading.** Long files demand a heading scan; cold reads burn context budget.
@@ -333,6 +368,7 @@ If you catch yourself thinking:
 - **`fts5-reindex.py`** at vault root — generates `vault.fts5.db` with trigram tokenizer, **one row per H1–H3 section** (code-fence aware), for Stage 1 BM25-ranked content match returning `rel_path + heading + line range`. Run after major edits (a few seconds for a few hundred files). DB absent → Stage 1 falls back to Grep/rg automatically.
 - **Frontmatter contract** — files synthesized by `/deep-research` or other agents MUST carry `generated_by: claude-*` and `human_reviewed: false` until a human promotes them. Stage 4 enforces this gate. Knowledge lineage uses the paired fields `supersedes: <older>.md` (on the new canon) and `superseded_by: <newer>.md` (on the stale file) — Stage 1 filters superseded rows, Stage 4 refuses to cite them.
 - **OKF frontmatter contract (Google Cloud Open Knowledge Format)** — v0.1 requires the trio `type` (short kind string), `description` (curated one-line summary), and `timestamp` (ISO 8601 of last meaningful change) on every concept file. v0.2 adds two optional keys this pipeline honors: `stale_after` (re-verify-after date) and `status` (`draft`/`stable`/`deprecated`; absent means stable). `fts5-reindex.py` v4 indexes all five — `type`/`timestamp`/`stale_after`/`status` as filterable columns, `description` as a searchable column on the file's first section row — and prints a `[contract]` report (frontmatter gaps, unreviewed synthesis, expired files, deprecated files, off-contract types, oversized files) on every run. That report is the vault's deterministic lint: Stage 1 filters `status`, Stage 4 gates `stale_after`, and neither spends tokens counting what the reindex already counted. The provenance keys above remain in force as OKF extension keys.
+- **Verdict layer (optional, vault-declared)** — a root `verdicts.md` hub plus cards tagged `verdict` with a `stale_after` shelf life. Stage 1 step 0 reads the hub before any search and short-circuits the pipeline when a live card already rules on the question. The layer is detected, never assumed: no `verdicts.md` at the vault root means step 0 is skipped and the pipeline runs unchanged. Cards use `type: canon` (so the Stage 1 type filter keeps them) and carry `distilled_from:` pointing at the source they were compressed from.
 - **Web augmentation (Stage 5)** — Brave Search MCP only (never built-in `WebSearch`); sequential calls only; freshness flags `pd`/`pw`/`pm`/`py` per global policy.
 - **Archive maintenance** — run `lychee "**/*.md"` periodically to detect link rot in source citations.
 
