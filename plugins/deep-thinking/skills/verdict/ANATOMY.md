@@ -75,11 +75,23 @@ Verified against `fts5-reindex.py`. These decide how a card is worded.
 
 **Only `description` and `body` are indexed.** `path`, `rel_path`, `heading`, `type`, `timestamp`, `stale_after` and `status` are all `UNINDEXED` — filterable, never matched.
 
-Four consequences:
+> 🔴 **`LIKE` does not work on these columns. It returns zero rows, and it does not error.**
+>
+> `UNINDEXED` means "not full-text searchable", not "unusable in `WHERE`" — `=` and `instr()` work normally. But `LIKE` against an FTS5 column silently yields nothing:
+>
+> ```sql
+> SELECT count(*) FROM notes_fts WHERE rel_path = 'verdicts.md';              -- 6   ✅
+> SELECT count(*) FROM notes_fts WHERE instr(rel_path, 'verdicts/') = 1;      -- 731 ✅
+> SELECT count(*) FROM notes_fts WHERE rel_path LIKE 'verdicts/%';            -- 0   ❌ silent
+> ```
+>
+> This is the worst class of bug the layer can have: a filter that returns nothing reads as *"no card owns this question"*, so the pipeline proceeds to re-research a settled topic with no warning. **Use `instr(col, 'prefix') = 1` for prefix matching and `=` for exact matching. Never `LIKE`.**
+
+Five consequences:
 
 1. **The file name contributes nothing to ranking.** A `-verdict` suffix buys no retrieval. What the name still does: `rel_path` comes back with every hit, and the agent judges relevance from it before opening. So name the file after the decision it closes.
 2. **Headings are invisible to search.** `## Rejects` alone matches nothing. Each H2 body restates the subject noun, because the retrieval unit is a section (H1–H3), not a file — a section arrives alone, stripped of the file's context.
-3. **Tags are searchable**, since frontmatter is part of the preamble body. Load them with the proper nouns.
+3. **Tags are searchable but imprecise.** There is no `tags` column — frontmatter is simply part of the preamble body, so a tag matches as ordinary text. That is fine for proper nouns, and wrong for genre. `MATCH 'verdict'` also hits any file whose prose contains the word: measured on one vault, **94 files for 59 cards** (a `### The Verdict` heading in an unrelated report is enough). **Load tags with proper nouns, and mark genre by location, not by tag** — a `verdicts/` prefix filtered with `instr()` is exact and costs nothing.
 4. **The tokenizer is trigram**, which solves substring matching and Korean morphology but not synonyms. It will never connect one term to a card that only uses another word for it. Put the alternative phrasings in the body or tags yourself.
 5. **Tokens shorter than three characters are not indexed at all.** In CJK that is a whole class of ordinary words — a two-glyph Korean tag is a tag no query can ever reach, and it fails silently rather than erroring. Verified: a `MATCH` on such a term returns zero rows across an entire vault. Write tags and key body terms at three characters or more, and when a two-character word is the natural one, put a longer compound beside it.
 

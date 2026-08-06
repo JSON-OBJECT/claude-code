@@ -60,20 +60,35 @@ A 150K-char file consumes ~42K tokens — 4.2% of a 1M context window. Three suc
 
 0. **Settled-conclusion check — the verdict layer** (runs before everything, when the vault has one)
 
-   Some vaults keep a **verdict layer**: cards that record a decision already made, so a future session acts on it instead of re-deriving it. A card is identifiable by `tags:` containing `verdict` plus a declared `stale_after`. The layer has a root hub — `verdicts.md` — that lists every card, its ruling in one line, and its shelf life.
+   Some vaults keep a **verdict layer**: cards that record a decision already made, so a future session acts on it instead of re-deriving it. Cards carry a declared `stale_after`; they live either under a `verdicts/` root folder or in their topic folders marked `tags: verdict`. The layer has a root hub — `verdicts.md`.
 
    ```bash
-   ls verdicts.md 2>/dev/null && head -80 verdicts.md   # hub absent → skip step 0 entirely, go to step 1
+   ls verdicts.md 2>/dev/null && wc -c verdicts.md   # hub absent → skip step 0 entirely, go to step 1
    ```
+
+   **Read the hub only if it is small** (≲15 KB — a router listing domains). A hub that has grown to hold every card's ruling costs more than the question is worth; read the router tier if one exists, otherwise skip straight to the query and note that the hub needs splitting (`/verdict` step 5 has the procedure).
+
+   ```bash
+   ./verdict-lookup.sh <keyword> [keyword2 ...]   # if the vault ships one — the intended entry point
+   ```
+
+   Otherwise query directly. Prefer the **path filter** when cards live under `verdicts/`:
 
    ```bash
    sqlite3 vault.fts5.db -separator $'\t' "
-     SELECT rel_path, heading, start_line || '-' || end_line, stale_after
+     SELECT DISTINCT rel_path, description, stale_after
      FROM notes_fts
-     WHERE notes_fts MATCH 'verdict AND (<topic keyword> OR <synonym>)'
+     WHERE rel_path IN (SELECT rel_path FROM notes_fts
+                        WHERE notes_fts MATCH '<topic keyword> OR <synonym>'
+                          AND instr(rel_path,'verdicts/') = 1)
+       AND description != '' AND stale_after != ''
        AND status != 'deprecated' AND superseded_by = ''
-     ORDER BY bm25(notes_fts) LIMIT 5;"
+     ORDER BY stale_after LIMIT 5;"
    ```
+
+   Fall back to `MATCH 'verdict AND (<topic> OR <synonym>)'` only when the vault has no `verdicts/` folder. That form is imprecise — there is no `tags` column, so it also matches any prose containing the word (measured: 94 files for 59 cards).
+
+   ⚠️ **Never filter with `LIKE`.** Against FTS5 columns it returns zero rows without erroring, which reads exactly like "no card owns this question" and sends you off to re-research a settled topic. Use `instr()` and `=`.
 
    Then branch on shelf life:
 
@@ -82,7 +97,7 @@ A 150K-char file consumes ~42K tokens — 4.2% of a 1M context window. Three suc
    - **A card covers it but is `status: draft` / `human_reviewed: false`** → the Stage 1 content query below filters it out, so the **hub row is the only path to it.** Use the card as provisional context, flag it as unpromoted, and continue to the normal pipeline for corroboration.
    - **No card covers it** → proceed to step 1 normally. If the session ends up doing real research, say so in the closing: this topic has no verdict card, and one could be minted.
 
-   **Why the hub exists and must be read, not just searched:** BM25 rewards term density, so a dense reference table can outrank the card that actually holds the ruling on the same subject. The hub is the deterministic backstop for that ranking failure — one read hands over the whole map.
+   **Why the hub exists at all:** BM25 rewards term density, so a dense reference table can outrank the card that actually holds the ruling on the same subject. The hub is the deterministic backstop for that ranking failure. But a backstop is only worth its price — a router that names the domains costs a few KB and catches the same failure, while a hub that reproduces every ruling charges tens of thousands of tokens to every question in the vault, including the ones with no card at all.
 
 1. **Filename / path match** (cheapest full-corpus step)
    - Internal: `Glob` with `pattern="**/*<keyword>*.md"`
@@ -292,6 +307,8 @@ If you catch yourself thinking:
 |--------|---------|
 | "The local archive probably doesn't have this." | You have not run `Glob`/`Grep` yet. "Probably" is not evidence. Run Stage 1 first; absence must be proven, not assumed. |
 | "I'll search the corpus first and check `verdicts.md` afterward if I need it." | Backwards. The hub is a short-circuit — checking it after you have already read five files spends exactly the budget it was built to save. |
+| "The verdict query came back empty, so nothing is settled here." | Check the query before believing it. `LIKE` on an FTS5 column returns zero rows silently; a term under three characters is never indexed. Both fail the same way an empty layer does. Re-run with `instr()` and a longer compound before concluding the topic is unowned. |
+| "The hub is the mandated first read, so I read all of it." | Mandated is the *check*, not the byte count. A hub that reproduces every ruling is a defect to report, not a toll to pay — read the router tier and query for the rest. |
 | "The verdict card is short, so it can't be the whole answer." | Brevity is the format, not a gap. The card carries the ruling, the rejects, and the appeal conditions; the deliberation lives in the source it was distilled from. Length is not evidence of completeness. |
 | "The card's ruling and a fresh web result disagree — the web is newer, so it wins." | Only if the card is expired or one of its stated appeal conditions has fired. Otherwise you are re-litigating a settled decision on one search result. Report the conflict as an appeal trigger; do not silently overwrite the ruling. |
 | "The file is 2,000 lines — too big to use." | That is exactly why Stage 2 exists. `mq '.h2'` takes milliseconds and turns 2,000 lines into a 10-line map. |
@@ -328,7 +345,7 @@ If you catch yourself thinking:
 | Stage | Activity | Primary Tool | Shell Fallback | Success Criterion |
 |-------|----------|-------------|----------------|-------------------|
 | **0. Awareness** | Choose tool layer | — | — | Internal tools chosen unless pipeline needed |
-| **1.0 Verdict** | Check the settled-conclusion layer before searching | `ls verdicts.md`, `Read` hub, FTS5 `MATCH 'verdict AND <topic>'` | — | Live card → answer from it, skip Stages 2–5; expired card → check only its appeal conditions; no card → continue |
+| **1.0 Verdict** | Check the settled-conclusion layer before searching | `./verdict-lookup.sh <keyword>`, or FTS5 `MATCH` + `instr(rel_path,'verdicts/')=1` (**never `LIKE`**); `Read` hub only if ≲15 KB | — | Live card → answer from it, skip Stages 2–5; expired card → check only its appeal conditions; no card → continue |
 | **1. Discovery** | Narrow + rank candidate SECTIONS (multi-lang, synonym-expanded) | `Glob`, **`sqlite3 vault.fts5.db ... ORDER BY bm25`** (section rows: `rel_path + heading + line range`; superseded + deprecated excluded), `Grep` fallback | `fd -e md`, `rg -l -t md` | Sections produced + BM25-ranked; query expanded on all four axes (language / register / specificity / abbreviation) before declaring thin results; `_inbox`/`_archive`/`_answers` excluded by default (explicit opt-in only; `_answers` → `[A-crystal]` event record); ≥5 → Explore delegation |
 | **2. Map** | Heading scan of long files (skippable per-hit when Stage 1 returned the section) | `Grep ^#{1,3}\s` | **`mq '.h2'`** (preferred), `rg -n '^#{1,3}\s'` | Section line ranges identified |
 | **3. Pinpoint** | Extract cited context | `Grep -n -C 5` | `rg -n -C 5` | `file:line` citations captured |
@@ -368,7 +385,7 @@ If you catch yourself thinking:
 - **`fts5-reindex.py`** at vault root — generates `vault.fts5.db` with trigram tokenizer, **one row per H1–H3 section** (code-fence aware), for Stage 1 BM25-ranked content match returning `rel_path + heading + line range`. Run after major edits (a few seconds for a few hundred files). DB absent → Stage 1 falls back to Grep/rg automatically.
 - **Frontmatter contract** — files synthesized by `/deep-research` or other agents MUST carry `generated_by: claude-*` and `human_reviewed: false` until a human promotes them. Stage 4 enforces this gate. Knowledge lineage uses the paired fields `supersedes: <older>.md` (on the new canon) and `superseded_by: <newer>.md` (on the stale file) — Stage 1 filters superseded rows, Stage 4 refuses to cite them.
 - **OKF frontmatter contract (Google Cloud Open Knowledge Format)** — v0.1 requires the trio `type` (short kind string), `description` (curated one-line summary), and `timestamp` (ISO 8601 of last meaningful change) on every concept file. v0.2 adds two optional keys this pipeline honors: `stale_after` (re-verify-after date) and `status` (`draft`/`stable`/`deprecated`; absent means stable). `fts5-reindex.py` v4 indexes all five — `type`/`timestamp`/`stale_after`/`status` as filterable columns, `description` as a searchable column on the file's first section row — and prints a `[contract]` report (frontmatter gaps, unreviewed synthesis, expired files, deprecated files, off-contract types, oversized files) on every run. That report is the vault's deterministic lint: Stage 1 filters `status`, Stage 4 gates `stale_after`, and neither spends tokens counting what the reindex already counted. The provenance keys above remain in force as OKF extension keys.
-- **Verdict layer (optional, vault-declared)** — a root `verdicts.md` hub plus cards tagged `verdict` with a `stale_after` shelf life. Stage 1 step 0 reads the hub before any search and short-circuits the pipeline when a live card already rules on the question. The layer is detected, never assumed: no `verdicts.md` at the vault root means step 0 is skipped and the pipeline runs unchanged. Cards use `type: canon` (so the Stage 1 type filter keeps them) and carry `distilled_from:` pointing at the source they were compressed from.
+- **Verdict layer (optional, vault-declared)** — a root `verdicts.md` hub plus cards with a `stale_after` shelf life, living either under `verdicts/<domain>/` or in topic folders marked `tags: verdict`. Stage 1 step 0 consults the layer before any search and short-circuits the pipeline when a live card already rules on the question. The layer is detected, never assumed: no `verdicts.md` at the vault root means step 0 is skipped and the pipeline runs unchanged. Cards use `type: canon` (so the Stage 1 type filter keeps them) and carry `distilled_from:` pointing at the source they were compressed from. When the hub has outgrown a router — cards' rulings reproduced in full, tens of KB — say so; `/verdict` step 5 carries the split procedure.
 - **Web augmentation (Stage 5)** — Brave Search MCP only (never built-in `WebSearch`); sequential calls only; freshness flags `pd`/`pw`/`pm`/`py` per global policy.
 - **Archive maintenance** — run `lychee "**/*.md"` periodically to detect link rot in source citations.
 

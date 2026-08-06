@@ -80,6 +80,31 @@ Follow the slot template in `ANATOMY.md`.
 
 Its body carries every ruling, so one hit on the hub hands over the whole map — the backstop for the ranking failure described in `ANATOMY.md`.
 
+**Watch the hub's size, because every question pays for it.** `/ground` reads the hub before searching anything, so its byte count is a fixed cost charged to questions that have nothing to do with any card. The failure is gradual and easy to miss: rulings get richer, each row grows from one line to a paragraph, and one domain quietly takes a third of the file. Measured on one vault, the hub reached **155 KB — roughly 44 K tokens, 4.4 % of a 1 M context window, spent before the question was even read.** Truncating the read does not save you; rows that long are not cut by `head`.
+
+**Split at ~15 KB, the same ceiling a single card has**, into three tiers:
+
+| Tier | Holds | Read when |
+|---|---|---|
+| `verdicts.md` — router | One row per domain: what it decides, card count, earliest expiry, link | **Every question** |
+| `verdicts/<domain>/INDEX.md` | The per-card ruling rows for that domain | Lookup is ambiguous or returns nothing |
+| `verdicts/CHARTER.md` | The genre contract | Minting or restructuring a card |
+
+Move session-by-session landing narrative out of the hub entirely. It is the fastest-growing and least-queried content there, and git already records what changed — keep only the reasoning a diff cannot reconstruct.
+
+Then make the router's next step a **query, not a read**. Nothing about locating one card justifies loading a whole domain index:
+
+```bash
+sqlite3 vault.fts5.db -separator $'\t' "
+  SELECT DISTINCT rel_path, description, stale_after FROM notes_fts
+  WHERE rel_path IN (SELECT rel_path FROM notes_fts
+                     WHERE notes_fts MATCH '<keyword>' AND instr(rel_path,'verdicts/')=1)
+    AND description != '' AND stale_after != ''
+  ORDER BY stale_after;"
+```
+
+Worth wrapping in a `verdict-lookup.sh` at the vault root: it is the one command every session runs first. Two things it should handle — warn on query terms under three characters (see `ANATOMY.md`), and fall back to the main checkout's index when run from a git worktree, where the gitignored DB is absent.
+
 Then close the loop minting opens. **A new card almost always overturns something an existing card asserts**, because the research that produced it went looking where the old cards were thin. Recording that only in the new card leaves the old one intact and wrong — and the old one is what retrieval hands the next session, because it owns the question the user will actually ask. A note in the hub does not fix this: the hub is read before searching, the stale card is read after.
 
 For each card minted, ask what existing card owns each question it touches, and run **Amend** on that card now — rewrite its ruling line, cross-link both directions, log the reversal. Do the same for the domain's entry-point card: its **Map** slot must list every sibling, or the designated entry point conceals part of the vault.

@@ -309,7 +309,7 @@ Executes a 5-stage pipeline (Discovery → Map → Pinpoint → Verify → Augme
 
 **Philosophy:** The curated `.md` corpus is ground truth. Web is a supplement for gaps only.
 
-**Verdict layer (optional).** If the vault root holds a `verdicts.md` hub, Stage 1 reads it *before* searching and stops there when a live verdict card already rules on the question — no re-research, no Stage 5. Past a card's `stale_after`, only its appeal conditions get re-checked, never the whole topic. No `verdicts.md` means the step is skipped and the pipeline runs unchanged. See `/deep-thinking:verdict` below.
+**Verdict layer (optional).** If the vault root holds a `verdicts.md` hub, Stage 1 consults it *before* searching and stops there when a live verdict card already rules on the question — no re-research, no Stage 5. The hub is meant to stay a thin router: it is read on every question, so once it grows past ~15 KB the layer switches to a lookup query against `verdicts/<domain>/` and reads only the card that matched. Past a card's `stale_after`, only its appeal conditions get re-checked, never the whole topic. No `verdicts.md` means the step is skipped and the pipeline runs unchanged. See `/deep-thinking:verdict` below.
 
 ---
 
