@@ -1,18 +1,20 @@
 ---
 name: verdict
-description: Distil a saved Q&A thread into verdict cards — compact, binding conclusions a future session reads instead of re-researching the topic.
+description: Distil a finished thread into verdict cards — compact, binding conclusions a future session reads instead of re-researching the topic. Builds the layer on first run.
 disable-model-invocation: true
 allowed-tools: Read, Write, Edit, Bash, Grep, Glob
-argument-hint: "[path to an _answers/ file, or blank to use this conversation]"
+argument-hint: "[optional: path to an _answers/ file — blank harvests this conversation]"
 ---
 
 # Verdict
 
 A **verdict** is a settled conclusion a future session obeys instead of re-researching. It states the ruling, the branch rules, the **rejects**, and the **appeal** conditions that would overturn it. How the deliberation went stays in the source.
 
-**Why this runs at all:** a session reaches a genuinely good answer and then ends before anyone files it. The reasoning evaporates and the next session pays for the same investigation again. This is the intake valve — it inhales that answer into the vault's brain while it is still there, compressed to the part a future session has to obey.
+**Why this runs at all:** a session reaches a genuinely good answer and then ends before anyone files it. The reasoning evaporates and the next session pays for the same investigation again. This is the intake valve.
 
-Source: **"$ARGUMENTS"** — an `_answers/` file crystallised earlier by `save-answer`, or this conversation when blank. Both are the same job: an answer that has not yet been filed.
+**It takes no instruction.** Invoked bare, it harvests the conversation it is running inside, rules on what was **settled**, finds the cards that own those questions, and **lands** the facts there — building the layer itself on the first run. `$ARGUMENTS`, when given, names an `_answers/` file to harvest instead.
+
+**Read `ANATOMY.md` now** — it holds the slot template, the frontmatter contract, and the retrieval mechanics that decide how a card gets written. Everything below assumes it.
 
 ## The inversion
 
@@ -21,78 +23,86 @@ Default summarising keeps the narrative and drops the numbers. A verdict does th
 **Carry** every number, proper noun, version string, parameter value, price, rejected option with its reason, and recorded dissent.
 **Leave behind** the research narrative, the comparison tables that produced the ruling, and the story of who found what.
 
-**Read `ANATOMY.md` now** — it holds the slot template, the frontmatter contract, and the retrieval mechanics that decide how a card gets written. Both branches below assume it.
+---
 
-## Pick the branch
+## Step 0 — Bootstrap the layer
 
-Run a search before choosing — from the vault root (the directory holding `fts5-reindex.py`):
+Decide the location yourself: locate the root, then create what is missing.
 
 ```bash
-grep -rl "tags:.*verdict" --include="*.md" . | head -20
-sqlite3 vault.fts5.db "SELECT DISTINCT rel_path FROM notes_fts WHERE notes_fts MATCH '<topic>' ORDER BY bm25(notes_fts) LIMIT 10"
+root="$(git rev-parse --show-toplevel 2>/dev/null || pwd)"   # vault root; prefer the dir holding fts5-reindex.py
+mkdir -p "$root/verdicts/<domain>"
 ```
 
-- Nothing covers the topic → **Mint**
-- Cards exist and this source adds or overturns facts → **Amend**
+**Domain** is the subject area the decision belongs to, one word, lowercase (`ai-cinema`, `infrastructure`, `fashion`). Mirror the vault's existing topic folders when they exist — cards at `verdicts/<topic>/` and prose at `<topic>/` put the same axis on two layers. When no folder fits, name the domain after the decision's field, not after the session.
+
+Seed these once, only if absent:
+
+| Path | Purpose | Seed when absent |
+|---|---|---|
+| `verdicts/<domain>/` | where cards live | always |
+| `verdicts.md` | root router, one row per **domain** | `type: index`, a table: domain · what it decides · card count · earliest expiry |
+| `verdicts/CHARTER.md` | the genre contract | copy the joining conditions, slot skeleton, and maintenance rules from `ANATOMY.md` |
+| `verdict-lookup.sh` | the query every session runs first | the script in Step 2 |
+
+**Done when** `verdicts/<domain>/` and the router both exist, each either newly seeded or left exactly as found.
 
 ---
 
-# Mint
+## Step 1 — Harvest, and rule on what is settled
 
-### 1. Prove the source is whole
+Read the whole source in order. Later turns correct earlier ones — a licence term restated from a primary source, a model that turned out to be omitted, a price that moved.
 
-A `_answers/` file may still be mid-write, and a source read at 40% yields cards that are wrong on arrival.
+When the source is an `_answers/` file, first prove it is whole; a file read at 40 % yields cards that are wrong on arrival:
 
 ```bash
 head -20 <source>              # the header usually declares the total ("9 rounds", "full thread")
 grep -nE "^#{1,2} " <source>   # enumerate what is actually present
-stat -c '%s %y' <source>       # size and mtime — a file touched minutes ago may still be growing
+stat -c '%s %y' <source>       # a file touched minutes ago may still be growing
 ```
 
-**Done when** the count the header declares equals the count you can enumerate. When they disagree, or the mtime is minutes old, re-check the size before starting rather than working from what is there.
+Then build a ledger of every fact, and rule on each one. **This ruling is the whole job** — a card is only as good as this classification.
 
-### 2. Read forward and log every reversal
-
-Read the whole source in order. Later rounds correct earlier ones — a licence term restated from primary sources, a model that turned out to be omitted, a price that moved.
-
-**Done when** for every section you can name which earlier claim it corrects or supersedes, or state that it corrects none. The log drives step 4; a card built from an early round alone is born wrong.
-
-### 3. Cut into decisions
-
-Four axes, applied together:
-
-- **Decision unit** — "which image model" is a topic and grows forever; "which image model do we use" is a decision and ends when the answer settles. Name each card with the question it closes.
-- **Retrieval moment** — budgeting, sitting at the tool, and asking legal are three moments. One card per moment.
-- **Decay rate** — model rankings and prices decay in ~2 months; craft principles and statute in ~6–12. Mixing rates forces the slow half through the fast half's review cycle.
-- **Size ceiling** — ~15 KB / ~5k tokens per card. A card over it splits along the three axes above.
-
-**Done when** every card answers one question, asked at one moment, under one `stale_after`, within the ceiling.
-
-### 4. Write the cards
-
-Follow the slot template in `ANATOMY.md`.
-
-**Done when** every slot carries content, and every number, proper noun, parameter value, rejected option, dissent, and reversal you logged in step 2 appears in exactly one card. A fact that survives in no card is a fact the next session pays to rediscover.
-
-### 5. Wire the hub — and amend what the new cards just contradicted
-
-`verdicts.md` at the vault root indexes every card: path, the ruling in one line, `stale_after`. Create it if absent (`type: index`).
-
-Its body carries every ruling, so one hit on the hub hands over the whole map — the backstop for the ranking failure described in `ANATOMY.md`.
-
-**Watch the hub's size, because every question pays for it.** `/ground` reads the hub before searching anything, so its byte count is a fixed cost charged to questions that have nothing to do with any card. The failure is gradual and easy to miss: rulings get richer, each row grows from one line to a paragraph, and one domain quietly takes a third of the file. Measured on one vault, the hub reached **155 KB — roughly 44 K tokens, 4.4 % of a 1 M context window, spent before the question was even read.** Truncating the read does not save you; rows that long are not cut by `head`.
-
-**Split at ~15 KB, the same ceiling a single card has**, into three tiers:
-
-| Tier | Holds | Read when |
+| Verdict on the fact | Test | Where it lands |
 |---|---|---|
-| `verdicts.md` — router | One row per domain: what it decides, card count, earliest expiry, link | **Every question** |
-| `verdicts/<domain>/INDEX.md` | The per-card ruling rows for that domain | Lookup is ambiguous or returns nothing |
-| `verdicts/CHARTER.md` | The genre contract | Minting or restructuring a card |
+| **Settled** | Measured first-hand, or read from a primary source **in this thread**, and nothing later reversed it | The ruling, branch table, or rejects table |
+| **Reversed** | An earlier claim this thread overturned | One line in the correction ledger — never in the body |
+| **Unresolved** | Awaiting legal, vendor, or a measurement not yet taken | Open items, or one bullet under appeal |
+| **Narrative** | How the investigation went, who found what, the comparison that produced the ruling | Nowhere. This is what compression means |
 
-Move session-by-session landing narrative out of the hub entirely. It is the fastest-growing and least-queried content there, and git already records what changed — keep only the reasoning a diff cannot reconstruct.
+**Explored but not concluded is not settled.** An option weighed mid-thread and dropped belongs in **rejects** with its reason, not in the ruling. Confidence that varied stays marked — verified against the primary source / secondary only / actively disputed.
 
-Then make the router's next step a **query, not a read**. Nothing about locating one card justifies loading a whole domain index:
+### Collapse the churn — the rule that makes long threads survivable
+
+A real session is not a clean investigation. It circles, repeats itself, and overturns its own findings three times as fresh research lands. Handled naively, every one of those flips becomes a line in some card, and the layer inherits the mess instead of the conclusion.
+
+**A claim's ledger entry is its *final* state in the thread, not its history.** Fold every flip of the same claim into one entry before routing anything.
+
+| Kind of reversal | Belongs in the card? |
+|---|---|
+| The thread contradicted **itself** — an early guess corrected by later research | **No.** Only the final state lands. The intermediate versions are narrative |
+| The thread's final state contradicts **what a card currently asserts** | **Yes** — rewrite that card's line, and log one correction-ledger entry |
+| The thread confirmed what the card already says | **No.** Nothing lands. Confirmation is not news; at most it moves `timestamp` |
+
+Otherwise the correction ledger becomes the patchwork the body was protected from. **The ledger records where the vault was wrong, not where the conversation wandered.**
+
+### Then sweep for omissions
+
+Before routing, re-read the source **once more against the ledger** and ask what is in the thread that the ledger does not carry. Long sessions bury settled numbers inside digressions, and a fact that survives in no card is a fact the next session pays to rediscover. This second pass is where completeness is actually won — the first pass follows the thread's own emphasis, which under-weights anything settled early and never revisited.
+
+**Done when** every fact in the source carries one of the four verdicts, every claim appears once in its final state, and the second pass surfaced nothing new.
+
+---
+
+## Step 2 — Route each fact to the card that owns it
+
+**Amend is the default. Mint is the exception.** A new card is correct only when a genuinely *new decision* arrived, not when new facts arrived about an old one. Facts split across a new card and a stale old one lose, because the old card owns the question the user will actually ask, and retrieval hands that one over.
+
+```bash
+./verdict-lookup.sh <keyword> [keyword2 ...]
+```
+
+When the script does not exist yet, this is its body — a query, not a read, because locating one card never justifies loading a whole domain:
 
 ```bash
 sqlite3 vault.fts5.db -separator $'\t' "
@@ -103,72 +113,105 @@ sqlite3 vault.fts5.db -separator $'\t' "
   ORDER BY stale_after;"
 ```
 
-Worth wrapping in a `verdict-lookup.sh` at the vault root: it is the one command every session runs first. Two things it should handle — warn on query terms under three characters (see `ANATOMY.md`), and fall back to the main checkout's index when run from a git worktree, where the gitignored DB is absent.
+Two things it must handle: warn on query terms under three characters (see `ANATOMY.md`), and fall back to the main checkout's index when run from a git worktree, where the gitignored DB is absent.
 
-Then close the loop minting opens. **A new card almost always overturns something an existing card asserts**, because the research that produced it went looking where the old cards were thin. Recording that only in the new card leaves the old one intact and wrong — and the old one is what retrieval hands the next session, because it owns the question the user will actually ask. A note in the hub does not fix this: the hub is read before searching, the stale card is read after.
+> 🔴 **Zero rows does not mean no card owns this.** It also means the keyword missed — a two-character term is not indexed at all, and a multi-word phrase matches literally. Retry with a different compound term, and check the domain folder listing, **before** concluding that minting is correct. A wrong zero here mints a duplicate card, which is the most expensive failure this layer has.
 
-For each card minted, ask what existing card owns each question it touches, and run **Amend** on that card now — rewrite its ruling line, cross-link both directions, log the reversal. Do the same for the domain's entry-point card: its **Map** slot must list every sibling, or the designated entry point conceals part of the vault.
-
-**Done when** every card has a hub row, every hub row resolves to a file, the entry-point Map lists every card in the domain, and every claim the new cards overturn has been rewritten in the card that owns it — not merely noted in the new one.
-
-### 6. Reindex and probe
-
-```bash
-python3 fts5-reindex.py
-sqlite3 vault.fts5.db "SELECT rel_path, heading FROM notes_fts WHERE notes_fts MATCH '<question a future session would ask>' AND status != 'deprecated' ORDER BY bm25(notes_fts) LIMIT 3"
-```
-
-**Done when** one realistic question per card returns that card in the top 3, and the reindex contract report shows no off-contract `type` and no oversized file. A card that does not surface is a card that does not exist.
-
-When a probe misses, sharpen the `description` and the body wording of the section that should have matched.
-
-### 7. Hand back the open items, and settle promotion in the same session
-
-A card left at `status: draft` / `human_reviewed: false` is filtered out of the grounding pipeline it exists to short-circuit — the retrieval query drops unreviewed files, so the next session re-researches the topic and may land somewhere else. The hub row is then the card's only path to a reader.
-
-So do not leave promotion to a later session that will not come. Report the open items, then **ask outright whether to promote now**, naming what a human would be signing off on.
-
-**Done when** the report names every claim the cards marked unverified, awaiting legal or vendor confirmation, or under live community dispute — and each card is either promoted (`status: stable`, `human_reviewed: true`) with that decision recorded, or left as a draft with the reason and the note that only the hub reaches it.
+**Done when** every settled fact names the card that owns its question, or is flagged as a new decision that needs Mint.
 
 ---
 
-# Amend
+## Step 3 — Land it
 
-New facts arrive in later sessions. The card absorbs them at constant size.
+### The card is **state**. Git is the **log**.
 
-### 1. Find the owning card
+A model editing a document narrates its own edit by reflex. Fifty amendments later the ruling is still correct and nobody can find it: the card has become a log of its own revisions. So every amendment rewrites, and **nothing in the card records that it rewrote.**
 
-Search first. Each fact belongs to the card whose question it answers.
+- A line that changed reads exactly like a line that never did — no `🆕`, no `🔄`, no `updated`, no *as of this session*.
+- A section that is now wrong gets **rewritten in place**, where `2026-08-06 addendum:` would have gone.
+- The one place a change is recorded is the **correction ledger**, and it names the overturned claim, not the act of editing.
 
-**Done when** every incoming fact is assigned to an existing card, or flagged as a new decision that needs Mint.
+Measured on one vault: **1,000 edit markers across 954 KB of cards — one per kilobyte —** with the 15 KB ceiling at 78 % violation.
 
-### 2. Land each fact in a slot
+### Every fact lands *in a slot the card already has*, by rewriting that slot
 
-Every fact lands in a slot the card already has. This is what holds size constant:
+| Incoming fact | Where it lands | What you rewrite |
+|---|---|---|
+| Changes the ruling | Ruling | **The ruling line itself.** Replace the sentence |
+| A new candidate | Rejects table, or branch table if adopted | One row. The body does not grow |
+| A new way the ruling could fail | Appeal | One bullet |
+| Overturns something the card asserts | Correction ledger | One line: what it used to claim, what is true, where the wrong version came from |
+| Deeper detail on something already ruled | The linked source | Nothing — the card's line stands |
 
-- A fact that changes the ruling → **rewrite the ruling line.** Replace, not append.
-- A new candidate → **one row in the rejects table**, or one row in the branch table if adopted. The body does not grow.
-- A new way the ruling could fail → **one bullet under appeal.**
-- Deeper detail on something already ruled → push it to the linked source, and keep the card's line as it is.
-
-**Done when** every fact occupies a slot, and a new section exists only where a genuinely new slot-worthy decision arrived.
-
-### 3. Record reversals
-
-When a fact overturns something the card asserts, keep one line in the correction ledger: what the card used to claim, what is true, and where the wrong version came from.
-
-The ledger exists because bad secondary sources persist. Without it the next session re-imports the same error from the same vendor blog.
-
-**Done when** every overturned claim has a ledger line and the body carries only the corrected version.
-
-### 4. Re-measure, re-stamp, re-probe
+### The size gate — the observable that catches you
 
 ```bash
-stat -c%s <card>; python3 fts5-reindex.py
+before=$(stat -c%s <card>)   # …amend…
+after=$(stat -c%s <card>);  echo "Δ $((after-before)) bytes for <N> new facts"
 ```
 
-- Over the ceiling → split along the three content axes from Mint step 3, repoint every cross-reference, and update the hub.
-- Bump `timestamp`; recompute `stale_after` from the fastest-decaying claim now in the card.
-- Probe as in Mint step 6.
+A card that absorbed three facts by replacement moves by hundreds of bytes, in either direction. **If it grew by thousands, you appended.** Go back and rewrite the slot instead. Run this on every amended card; a growth curve is the only reliable detector of patchwork, because each individual addition always looks justified.
 
-**Done when** the card is under the ceiling, its dates reflect today's edit, and it still surfaces on a realistic question.
+**Done when** every fact occupies a slot, the card reads as pure **state**, and the byte delta is consistent with replacement.
+
+---
+
+## Step 4 — Mint, when the decision really is new
+
+### Cut into decisions
+
+Four axes, applied together:
+
+- **Decision unit** — "which image model" is a topic and grows forever; "which image model do we use" is a decision and ends when the answer settles. Name each card with the question it closes.
+- **Retrieval moment** — budgeting, sitting at the tool, and asking legal are three moments. One card per moment.
+- **Decay rate** — model rankings and prices decay in ~2 months; craft principles and statute in ~6–12. Mixing rates forces the slow half through the fast half's review cycle.
+- **Size ceiling** — ~15 KB per card. Over it, split along the three axes above.
+
+> The reindex contract report will **not** catch this. Its oversize threshold is 80 K chars, five times the card ceiling — a 40 KB card passes it silently. Measure cards yourself: `find verdicts -name '*.md' -size +15k`.
+
+Then write the card against the slot template in `ANATOMY.md`, and **spread the expiry**. `stale_after` comes from the fastest-decaying claim, but when a session mints six cards they inherit the same date and expire as one unreviewable batch. Scatter them across ±10 days so review arrives as a queue, not an avalanche.
+
+**Done when** every card answers one question, asked at one moment, under one `stale_after`, within the ceiling — and every number, proper noun, parameter value, rejected option, dissent, and reversal from Step 1 appears in exactly one card.
+
+### Close the loop minting opens
+
+**A new card almost always overturns something an existing card asserts**, because the research that produced it went looking where the old cards were thin. For each card minted, ask what existing card owns each question it touches, and run Step 3 on that card now — rewrite its ruling line, cross-link both directions, log the reversal.
+
+---
+
+## Step 5 — Wire the router, and keep it a router
+
+`verdicts.md` at the vault root is read on **every** question, so its byte count is a fixed cost charged to questions that have nothing to do with any card. The failure is gradual: rulings get richer, each row grows from one line to a paragraph, and one domain quietly takes a third of the file. Measured on one vault, a hub reached **155 KB — roughly 44 K tokens, 4.4 % of a 1 M context window, spent before the question was even read.**
+
+**So the router holds one row per _domain_, not per card** — what the domain decides, how many cards, the earliest expiry, the link. Card-level routing is what `verdict-lookup.sh` is for. Split at ~12 KB.
+
+| Tier | Holds | Read when |
+|---|---|---|
+| `verdicts.md` — router | One row per domain | Every question |
+| `verdict-lookup.sh` | Path · ruling · expiry, by keyword | To locate a card — **the normal path** |
+| `verdicts/CHARTER.md` | The genre contract | Minting or restructuring a card |
+
+### A ruling lives in exactly one card
+
+Every extra copy is a **mirror**, and mirrors **drift** — the copy that goes stale is the one nobody reindexes, and it is what retrieval hands over. Any listing of cards is therefore **generated** from frontmatter and marked generated, because derived state cannot drift.
+
+> 🔴 **A hand-maintained per-card index is this layer's strongest attractor and its worst investment.** Path, ruling and expiry already live in each card's frontmatter, so the index buys nothing a query does not return for free. Measured on one vault: a 99 KB domain index cost **63 hand edits across 200 commits**, went **last in BM25 on every query it matched** (length normalisation buries a file indexed as three giant sections), and still advertised a table its owning card had transferred away six days earlier. Reach for `--emit-index`-style generation instead, and an index that is *only* a mirror can be deleted outright.
+
+**Done when** the router has a row per domain, every row resolves, and every ruling exists in exactly one card.
+
+---
+
+## Step 6 — Reindex, probe, promote
+
+```bash
+./reindex.sh          # or: python3 fts5-reindex.py
+sqlite3 vault.fts5.db "SELECT rel_path, heading FROM notes_fts
+  WHERE notes_fts MATCH '<question a future session would ask>'
+    AND status != 'deprecated' ORDER BY bm25(notes_fts) LIMIT 3"
+```
+
+Probe with one realistic question per touched card. **A card that does not surface is a card that does not exist.** When a probe misses, sharpen the `description` and restate the subject noun inside the body of the section that should have matched — the retrieval unit is a section, not a file.
+
+Then settle promotion **in this session**, because a later session will not come. A card left at `status: draft` / `human_reviewed: false` is filtered out of the grounding pipeline it exists to short-circuit, so the next session re-researches the topic anyway. Report the open items, then ask outright whether to promote, naming what a human would be signing off on.
+
+**Done when** every touched card surfaces in the top 3 on a realistic question, and each is either promoted (`status: stable`, `human_reviewed: true`) with that decision recorded, or left draft with the reason stated.

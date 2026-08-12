@@ -53,9 +53,12 @@ tags: [verdict, <domain>, <the proper nouns a future question will contain>]
 
 Optional slots, added only when the material exists:
 
-- **Map** — a table of sibling cards and the question each closes. One card per domain carries it and becomes the entry point.
-- **Correction ledger** — one line per overturned claim: what the card used to say, what is true, where the wrong version came from.
+- **Correction ledger** — one line per overturned claim: what the card used to say, what is true, where the wrong version came from. **This is the only place an edit may be recorded**, and it records the overturned claim, not the act of editing.
 - **Open items** — claims awaiting legal, vendor, or first-hand confirmation. These stay listed even after `human_reviewed: true`, because that flag promotes the file, not the individual claim.
+
+There is deliberately **no map slot**. A table of sibling cards inside a card is a third copy of routing state that already exists in the frontmatter and in `verdict-lookup.sh`, and it goes stale the moment a sibling is renamed or split. Point at a sibling where the prose genuinely needs it — an inline link, one direction, at the sentence that hands the question over.
+
+**The card is state; git is the log** — so a card carries no mark that it changed. [`SKILL.md`](SKILL.md) Step 3 holds this rule and the byte gate that enforces it.
 
 ## Frontmatter contract
 
@@ -95,7 +98,9 @@ Five consequences:
 4. **The tokenizer is trigram**, which solves substring matching and Korean morphology but not synonyms. It will never connect one term to a card that only uses another word for it. Put the alternative phrasings in the body or tags yourself.
 5. **Tokens shorter than three characters are not indexed at all.** In CJK that is a whole class of ordinary words — a two-glyph Korean tag is a tag no query can ever reach, and it fails silently rather than erroring. Verified: a `MATCH` on such a term returns zero rows across an entire vault. Write tags and key body terms at three characters or more, and when a two-character word is the natural one, put a longer compound beside it.
 
-**A dense reference card can outrank the card holding the ruling**, because BM25 rewards term density and a table of many short rows concentrates a proper noun harder than the paragraph that decides about it. Sharpening the `description` does not always fix it. This is why the root hub exists.
+**A dense reference card can outrank the card holding the ruling**, because BM25 rewards term density and a table of many short rows concentrates a proper noun harder than the paragraph that decides about it. Sharpening the `description` does not always fix it. The router and the lookup query exist to cover this case — not a per-card index file, which loses to BM25 in the opposite direction.
+
+> The same normalisation that lets a dense table win also makes a **large** file lose. A 99 KB index parsed into three enormous sections ranked **dead last** on every query it matched, and missed entirely on common terms. Size is not a ranking asset. Cards stay small so they stay findable, not only so they stay readable.
 
 ## Voice
 
