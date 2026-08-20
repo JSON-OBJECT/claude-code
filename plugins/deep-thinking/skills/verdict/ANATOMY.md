@@ -47,11 +47,11 @@ tags: [verdict, <domain>, <the proper nouns a future question will contain>]
 - Lineage (not evidence): `_answers/<file>.md` — excluded from the index
 ```
 
-**Rejects** is the highest-value slot per token. Without it the next session re-investigates every option the card fails to mention, and the reason is what stops the re-litigation. Every card carries it, including cards that rule on something other than a tool choice — a card ruling on sources rejects the poisoned ones and says how to spot them. Keep the heading `## Rejects — …` so the slot stays identifiable.
+**Rejects** is the highest-value slot per token. Without it the next session re-investigates every option the card fails to mention, and the reason is what stops the re-litigation. Every card carries it, including cards that rule on something other than a tool choice — a card ruling on sources rejects the poisoned ones and says how to spot them.
 
 **Appeal** is what makes brevity safe. A short card's risk is being quietly wrong; naming its failure conditions means an expired card needs three lines re-checked, not a fresh investigation.
 
-Both slots are mandatory. `verdict-lookup.sh --lint` checks for them, along with the ceiling, dated headings, edit markers, non-card files and router hygiene — run it before promoting. The heading may be localised or numbered (`## 3. 탈락 (Rejects) — …`); the lint matches the slot's function, so keep the wording your vault already uses rather than renaming cards to satisfy a grep.
+Both slots are mandatory, and both are what `verdict-lookup.sh --lint` looks for before you promote a card — along with the ceiling, dated headings, edit markers, non-card files and router hygiene. **The heading identifies the slot by function, not by an English literal**: `## 3. 탈락 (Rejects) — …` and `## 재조사 트리거 — …` are the same slots, and a vault keeps the wording it already uses rather than renaming cards to satisfy a grep.
 
 Optional slots, added only when the material exists:
 
