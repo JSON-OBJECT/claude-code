@@ -51,6 +51,8 @@ tags: [verdict, <domain>, <the proper nouns a future question will contain>]
 
 **Appeal** is what makes brevity safe. A short card's risk is being quietly wrong; naming its failure conditions means an expired card needs three lines re-checked, not a fresh investigation.
 
+Both slots are mandatory and both are the first things a hurried session drops — measured on one vault, **~31 % of cards were missing each**. `verdict-lookup.sh --lint` checks for them, along with the ceiling, dated headings, edit markers, non-card files and router hygiene. Run it before promoting.
+
 Optional slots, added only when the material exists:
 
 - **Correction ledger** — one line per overturned claim: what the card used to say, what is true, where the wrong version came from. **This is the only place an edit may be recorded**, and it records the overturned claim, not the act of editing.
@@ -93,7 +95,7 @@ Verified against `fts5-reindex.py`. These decide how a card is worded.
 Five consequences:
 
 1. **The file name contributes nothing to ranking.** A `-verdict` suffix buys no retrieval. What the name still does: `rel_path` comes back with every hit, and the agent judges relevance from it before opening. So name the file after the decision it closes.
-2. **Headings are invisible to search.** `## Rejects` alone matches nothing. Each H2 body restates the subject noun, because the retrieval unit is a section (H1–H3), not a file — a section arrives alone, stripped of the file's context.
+2. **Headings are invisible to search.** `## Rejects` alone matches nothing. Each H2 body restates the subject noun, because the retrieval unit is a section (H1–H3), not a file — a section arrives alone, stripped of the file's context. Headings still decide the card's *shape*, which is why they name a decision, a situation, or a subject and **never a date or an event**: a section titled with a date buys nothing in retrieval and turns the card into the log it is not. Facts arriving in waves are folded into the slot that owns them, not filed under the wave.
 3. **Tags are searchable but imprecise.** There is no `tags` column — frontmatter is simply part of the preamble body, so a tag matches as ordinary text. That is fine for proper nouns, and wrong for genre. `MATCH 'verdict'` also hits any file whose prose contains the word: measured on one vault, **94 files for 59 cards** (a `### The Verdict` heading in an unrelated report is enough). **Load tags with proper nouns, and mark genre by location, not by tag** — a `verdicts/` prefix filtered with `instr()` is exact and costs nothing.
 4. **The tokenizer is trigram**, which solves substring matching and Korean morphology but not synonyms. It will never connect one term to a card that only uses another word for it. Put the alternative phrasings in the body or tags yourself.
 5. **Tokens shorter than three characters are not indexed at all.** In CJK that is a whole class of ordinary words — a two-glyph Korean tag is a tag no query can ever reach, and it fails silently rather than erroring. Verified: a `MATCH` on such a term returns zero rows across an entire vault. Write tags and key body terms at three characters or more, and when a two-character word is the natural one, put a longer compound beside it.

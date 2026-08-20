@@ -1,5 +1,5 @@
 ---
-description: Use when turning a folder of markdown files (or an empty folder) into an LLM Wiki vault for the deep-thinking pipeline — verifies the FTS5 trigram runtime per OS, installs fts5-reindex.py, scaffolds convention folders, git-inits with .gitignore, appends the vault protocol to CLAUDE.md non-destructively, builds vault.fts5.db, and proves it with a BM25 smoke query
+description: Use when turning a folder of markdown files (or an empty folder) into an LLM Wiki vault for the deep-thinking pipeline — verifies the FTS5 trigram runtime per OS, installs fts5-reindex.py and verdict-lookup.sh, scaffolds convention folders, git-inits with .gitignore, appends the vault protocol to CLAUDE.md non-destructively, builds vault.fts5.db, and proves it with a BM25 smoke query
 allowed-tools: Glob, Grep, Read, Bash, Write, Edit
 argument-hint: [target-directory] (defaults to current working directory)
 ---
@@ -17,7 +17,7 @@ Think `git init`, but for knowledge: run it once inside a folder, and that folde
 ```
 EVERYTHING HAPPENS INSIDE THE VAULT ROOT. NOTHING OUTSIDE IT.
 EXISTING FILES ARE PRESERVED — CLAUDE.md IS APPENDED TO, NEVER REWRITTEN.
-fts5-reindex.py IS DEPLOYED VERBATIM — NEVER EDITED, "IMPROVED", OR PATCHED.
+fts5-reindex.py AND verdict-lookup.sh ARE DEPLOYED VERBATIM — NEVER EDITED, "IMPROVED", OR PATCHED.
 SETUP IS NOT DONE UNTIL A BM25 SMOKE QUERY RETURNS A REAL HIT.
 ```
 
@@ -36,7 +36,7 @@ The vault root is `$ARGUMENTS` if a path was given, otherwise the current workin
 1. Resolve the vault root (argument path or cwd) to an absolute path.
 2. Survey it: `eza -la` (or `ls -la`) plus `fd -e md . <root> | head -20` (fallback `find <root> -name '*.md'`). Count the `.md` files.
 3. **Refuse unsafe targets.** If the root is the user's home directory itself, a system path (`/`, `/usr`, `/etc`, `/tmp` root), or clearly another kind of project (e.g. contains `package.json`/`Cargo.toml` with a `src/` tree and no markdown corpus), STOP and ask the user to confirm or pick a subdirectory. A vault is a folder of markdown notes — not someone's entire home.
-4. **Idempotency check.** If `fts5-reindex.py` AND `vault.fts5.db` already exist at the root, this is a re-run: switch to upgrade mode (refresh the script from the plugin, re-append nothing that already exists, reindex, re-verify). Never duplicate scaffolding or CLAUDE.md sections.
+4. **Idempotency check.** If `fts5-reindex.py` AND `vault.fts5.db` already exist at the root, this is a re-run: switch to upgrade mode (refresh BOTH scripts from the plugin, re-append nothing that already exists, reindex, re-verify). Never duplicate scaffolding or CLAUDE.md sections.
 
 ### Stage 1 — Preflight (Environment, Per OS)
 
@@ -75,20 +75,33 @@ The vault root is `$ARGUMENTS` if a path was given, otherwise the current workin
    Missing tools do not hard-block setup — `/ground` has internal-tool fallbacks — but a vault initialized without `mq` and `sqlite3` runs the pipeline degraded, so install unless the user declines or no package manager exists (then list the leftovers in the report with the command above as the remedy).
    **macOS PATH caveat:** Homebrew's `sqlite` is keg-only; ensure `$(brew --prefix)/opt/sqlite/bin` precedes the system path so `sqlite3` resolves to the FTS5-capable binary.
 
-### Stage 2 — Deploy fts5-reindex.py
+### Stage 2 — Deploy the two vault scripts
 
-**GATE: The script arrives verbatim, from the closest trusted source.**
+**GATE: Both scripts arrive verbatim, from the closest trusted source.**
 
-Source priority (try in order, stop at first success):
+A vault runs on two plugin artifacts. `fts5-reindex.py` builds the index every command searches; `verdict-lookup.sh` is the verdict layer's query, index generator, and lint — `/deep-thinking:verdict` and `/deep-thinking:ground` Stage 1.0 both call it by name, so a vault without it silently falls back to hand-written SQL and loses the lint entirely.
 
-1. **Installed plugin copy** — `${CLAUDE_PLUGIN_ROOT}/fts5-reindex.py`. Version-matched to this command and works offline. Copy it to `<vault-root>/fts5-reindex.py`.
+Source priority (try in order, stop at first success), for **each** file:
+
+1. **Installed plugin copy** — `${CLAUDE_PLUGIN_ROOT}/<file>`. Version-matched to this command and works offline. Copy it to `<vault-root>/<file>`.
 2. **GitHub raw fallback** (plugin copy unavailable):
    ```bash
-   curl -fsSL -o fts5-reindex.py \
-     https://raw.githubusercontent.com/JSON-OBJECT/claude-code/main/plugins/deep-thinking/fts5-reindex.py
+   base=https://raw.githubusercontent.com/JSON-OBJECT/claude-code/main/plugins/deep-thinking
+   curl -fsSL -o fts5-reindex.py   "$base/fts5-reindex.py"
+   curl -fsSL -o verdict-lookup.sh "$base/verdict-lookup.sh"
+   chmod +x verdict-lookup.sh
    ```
 
-After deploying: `python3 -m py_compile fts5-reindex.py` MUST pass (guards against truncated downloads). You MUST NOT edit the script — not its code, not its comments, not "just the docstring". If a copy already exists at the root, overwrite it with the plugin version (report that you refreshed it).
+After deploying, both integrity checks MUST pass (they guard against truncated downloads):
+
+```bash
+python3 -m py_compile fts5-reindex.py
+bash -n verdict-lookup.sh
+```
+
+You MUST NOT edit either script — not its code, not its comments, not "just the docstring". If a copy already exists at the root, overwrite it with the plugin version (report that you refreshed it). `verdict-lookup.sh` needs no `verdicts/` folder to exist yet; it discovers card roots at call time and reports cleanly when there are none.
+
+**Non-English vaults:** the listings `verdict-lookup.sh --emit-index` generates are boilerplate around card-derived values, and default to English. If the vault's working language is not English, set `VERDICT_INDEX_LANG` (currently `en`, `ko`) in the vault's environment and say so in the CLAUDE.md block, so regeneration never flips existing indexes to another language.
 
 ### Stage 3 — Scaffold Convention Folders + Git
 
@@ -137,6 +150,7 @@ This directory is an LLM Wiki vault. For EVERY question about this vault's topic
 ### Index Contract
 
 - `vault.fts5.db` (SQLite FTS5, trigram tokenizer, one row per H1–H3 section) powers BM25-ranked search. If it is missing or stale, run `python3 fts5-reindex.py` BEFORE answering — it takes seconds.
+- `./verdict-lookup.sh <keyword>` is the entry point to the **verdict layer** — settled conclusions that a session obeys instead of re-researching. Run it BEFORE any investigation or web search on a topic; a live card short-circuits the whole pipeline. `--lint` checks the layer's health, `--emit-index` regenerates domain listings. The layer is created on first use by `/deep-thinking:verdict`; until then the lookup simply returns nothing. **Never hand-write the SQL it wraps** — the query must OR together every card root the vault has, and a predicate anchored to one root silently drops the others.
 - Re-run `python3 fts5-reindex.py` after adding or editing `.md` files so changes become searchable.
 - `_inbox/`, `_archive/`, and `_answers/` are excluded from indexing and grounding by design. Never cite them as sources.
 
@@ -217,7 +231,7 @@ Summarize in this order:
 |-------|----------|----------|-------------------|
 | **0. Resolve** | Absolute root, survey, safety + idempotency gates | `eza`/`fd` | Target confirmed safe; re-run detected |
 | **1. Preflight** | Python + FTS5 trigram smoke test; install missing pipeline CLIs | `python3 -c "...fts5(x, tokenize='trigram')..."`, `command -v`, `brew install` | Smoke test prints OK; pipeline CLIs present (or remedies reported) |
-| **2. Deploy** | Copy script: plugin root → GitHub raw fallback | `cp` / `curl -fsSL` | `py_compile` passes; script verbatim |
+| **2. Deploy** | Copy BOTH scripts: plugin root → GitHub raw fallback | `cp` / `curl -fsSL` | `py_compile` and `bash -n` pass; scripts verbatim |
 | **3. Scaffold** | `_inbox/ _archive/ _answers/` + `git init` + `.gitignore` | `mkdir` / `git` | Folders exist; DB artifacts ignored |
 | **4. CLAUDE.md** | Append vault protocol block, never rewrite | `Read` → `Edit`/`Write` | Existing content byte-identical; block present once |
 | **5. Verify** | Reindex + BM25 smoke query (CJK if applicable) | `python3 fts5-reindex.py`, `sqlite3` | ≥1 real section hit (or clean empty-vault path) |
@@ -230,7 +244,8 @@ Summarize in this order:
 - **`/deep-thinking:ground`** — the consumer of everything this command builds: `vault.fts5.db` for Stage 1 BM25, the frontmatter contract for Stage 4 gates, the folder exclusions for Stage 1 filtering.
 - **`/deep-thinking:save-answer`** — writes into the `_answers/` quarantine this command scaffolds.
 - **`/deep-thinking:journal`** / **`/deep-thinking:schedule`** — write `.md` records into the vault and rely on `git init` (history) plus `fts5-reindex.py` (searchability) from this command.
-- **`fts5-reindex.py`** — the single build tool this command deploys; its header documents installation remedies in depth if Stage 1 fails on an exotic platform.
+- **`fts5-reindex.py`** — the build tool this command deploys; its header documents installation remedies in depth if Stage 1 fails on an exotic platform.
+- **`verdict-lookup.sh`** — the other deployed artifact; it carries the card query, `--emit-index`, and `--lint`, and is what `/deep-thinking:verdict` and `/deep-thinking:ground` call by name.
 
 ---
 
