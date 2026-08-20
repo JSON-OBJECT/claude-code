@@ -246,7 +246,9 @@ for c in <touched cards>; do
 done
 ```
 
-Surfacing is the easy half. Memory systems resolve *what the current state is* at **91 %** and then act on it in open-ended work at **32 %**, with the correct value already visible in **67.8 %** of those failures (Stale benchmark, via arXiv 2608.01619). Finding the card is the 91 %; the answer obeying it is the 32 %, and **the slots are what closes that gap** — a branch table turns an unstated assumption into a stated rule, and `Rejects` pre-empts the option the next session would re-litigate. `Appeal` is load-bearing twice over: without it an expired card collapses back into full re-investigation, the exact cost it was minted to avoid. Measured on one vault, **~31 % of cards were missing each.**
+Surfacing is the easy half. Memory systems resolve *what the current state is* at **91 %** and then act on it in open-ended work at **32 %**, with the correct value already visible in **67.8 %** of those failures (Stale benchmark, via arXiv 2608.01619). Finding the card is the 91 %; the answer obeying it is the 32 %, and **the slots are what closes that gap** — a branch table turns an unstated assumption into a stated rule, and `Rejects` pre-empts the option the next session would re-litigate. `Appeal` is load-bearing twice over: without it an expired card collapses back into full re-investigation, the exact cost it was minted to avoid.
+
+> 🔴 **Check the slot by its function, never by its English label.** A vault localises these headings and numbers them — `## 3. 탈락 (Rejects) — …`, `## 재조사 트리거 — …` — so a `^## Rejects` grep reports a present slot as missing. Measured on one vault, that mistake alone produced **112 false findings across 178 cards, on a layer where every single card in fact carried both slots.** A lint that sends a session to rewrite correct cards is worse than no lint; `--lint` matches a set of alternates per slot, and a vault that settles on new wording extends that set rather than renaming its cards.
 
 ### Run the layer's lint before you finish
 

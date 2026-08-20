@@ -280,8 +280,18 @@ report("chronology", "files with dated section headings",
                for r, t, _ in cards if any(DATE_HEAD.match(l) for l in t.splitlines())), reverse=True))
 
 print("\n[4] Slots — Rejects is the highest value per token; Appeal is what makes brevity safe")
-for slot in ("Rejects", "Appeal"):
-    miss = [r for r, t, _ in cards if not re.search(rf"^##\s+{slot}\b", t, re.M)]
+# A slot is identified by its FUNCTION, not by an English label. Vaults localise these
+# headings and number them ("## 3. 탈락 (Rejects) — …"), so matching the English word
+# alone reports a slot as missing when it is present — the most misleading kind of
+# lint failure, because it sends a session to rewrite a card that was already correct.
+# Extend SLOTS when a vault settles on another wording; do not rename its cards.
+SLOTS = {
+    "Rejects": r"Rejects|탈락|却下",
+    "Appeal":  r"Appeal|재조사|뒤집히는\s*조건|覆",
+}
+for slot, alts in SLOTS.items():
+    pat = rf"^#{{2,3}}\s*(?:\d+[.)]\s*)?[^\n]*(?:{alts})"
+    miss = [r for r, t, _ in cards if not re.search(pat, t, re.M)]
     if miss:
         viol[slot] = len(miss)
         print(f"  !!  no {slot} — {len(miss)} of {len(cards)} ({len(miss)*100//max(len(cards),1)}%)")
@@ -311,10 +321,16 @@ if hub.is_file():
     ht = hub.read_text(errors="ignore"); hb = len(ht.encode()); ok = True
     if hb > ROUTER_MAX:
         print(f"  !!  {hb/1024:.1f} KB > {ROUTER_MAX//1024} KB — compress the rows or split"); ok = False
+    # Measure the description cell, not the whole line: link markup is fixed overhead
+    # that a long domain name inflates, and it is not what grows when a ruling leaks in.
     rows = [l for l in ht.splitlines() if re.match(r"^\|\s*\[", l)]
-    long = sorted(((len(l), re.search(r"\[([^\]]+)\]", l).group(1)) for l in rows if len(l) > ROUTER_ROW), reverse=True)
+    def cell(l):
+        c = [x.strip() for x in l.strip().strip("|").split("|")]
+        return c[1] if len(c) > 1 else ""
+    long = sorted(((len(cell(l)), re.search(r"\[([^\]]+)\]", l).group(1)) for l in rows
+                   if len(cell(l)) > ROUTER_ROW), reverse=True)
     if long:
-        print(f"  !!  {len(long)} rows over {ROUTER_ROW} chars — a ruling in the router is a mirror"); ok = False
+        print(f"  !!  {len(long)} description cells over {ROUTER_ROW} chars — a ruling in the router is a mirror"); ok = False
         for n, d in long[:5]:
             print(f"        {n:>6}  {d}")
     if MARKERS.search(ht):

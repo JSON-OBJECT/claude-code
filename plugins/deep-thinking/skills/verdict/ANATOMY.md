@@ -51,7 +51,7 @@ tags: [verdict, <domain>, <the proper nouns a future question will contain>]
 
 **Appeal** is what makes brevity safe. A short card's risk is being quietly wrong; naming its failure conditions means an expired card needs three lines re-checked, not a fresh investigation.
 
-Both slots are mandatory and both are the first things a hurried session drops — measured on one vault, **~31 % of cards were missing each**. `verdict-lookup.sh --lint` checks for them, along with the ceiling, dated headings, edit markers, non-card files and router hygiene. Run it before promoting.
+Both slots are mandatory. `verdict-lookup.sh --lint` checks for them, along with the ceiling, dated headings, edit markers, non-card files and router hygiene — run it before promoting. The heading may be localised or numbered (`## 3. 탈락 (Rejects) — …`); the lint matches the slot's function, so keep the wording your vault already uses rather than renaming cards to satisfy a grep.
 
 Optional slots, added only when the material exists:
 
