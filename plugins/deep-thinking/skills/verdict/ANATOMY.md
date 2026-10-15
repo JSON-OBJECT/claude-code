@@ -70,8 +70,8 @@ There is deliberately **no map slot**. A table of sibling cards inside a card is
 | `description` | Carries the ruling. It is an indexed column and rides only on the file's first section row, so it is what a search hit shows before the file is opened. |
 | `tags` | Starts with `verdict`, then the proper nouns a future question will actually contain. Frontmatter sits inside the preamble section body, so tags are searchable text. |
 | `stale_after` | Set from the **fastest-decaying** claim in the card. The reindex prints the expired list on every run, which is what turns review into a dated queue instead of a growing backlog. |
-| `status` | `draft` until a human reviews. `deprecated` when retired, paired with `superseded_by`. **A draft card is invisible to retrieval** — the grounding query filters `human_reviewed != 'false'`, so an unpromoted card is reachable only through the hub row. Settle promotion in the minting session (Mint step 7) rather than accumulating a backlog of cards that cannot be found. |
-| `distilled_from` | Names the `_answers/` file as lineage. Deliberately not `evidence:` — `_answers/` is excluded from indexing and grounding so that LLM output never re-enters as LLM source. Evidence points at what the answer cited. |
+| `status` | `draft` until a human reviews. `deprecated` when retired, paired with `superseded_by`. **A draft card is invisible to `/ground`'s content query**, which filters `human_reviewed != 'false'`. `verdict-lookup.sh` still lists it, so it is found, but only as provisional context, never as a ruling to act on. Settle promotion in the session that wrote it (Step 6) rather than accumulating a backlog of cards that cannot be used. |
+| `distilled_from` | Names the `_answers/` file as lineage. Required — `--lint` fails a card without it, or one naming a file that is no longer there. Deliberately not `evidence:` — `_answers/` is excluded from indexing and grounding so that LLM output never re-enters as LLM source. Evidence points at what the answer cited. |
 | `supersedes` / `superseded_by` | Paired, and used when a card splits or is replaced. The superseded file stays. |
 
 ## Retrieval mechanics

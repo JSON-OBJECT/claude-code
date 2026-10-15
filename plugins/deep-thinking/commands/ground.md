@@ -72,15 +72,17 @@ A 150K-char file consumes ~42K tokens — 4.2% of a 1M context window. Three suc
    ./verdict-lookup.sh <keyword> [keyword2 ...]   # if the vault ships one — the intended entry point
    ```
 
-   Otherwise query directly. Prefer the **path filter** when cards live under `verdicts/`:
+   Otherwise query directly. Prefer the **path filter** when cards live in `verdicts/` folders. A card root is **any folder named `verdicts`, at any depth** (skip folders starting with `.` or `_`). OR one `instr()` per root, because a predicate anchored to one root silently drops the rest:
 
    ```bash
+   fd -t d '^verdicts$' . -E '.*' -E '_*'      # list the roots — e.g. verdicts/ and <scope>/verdicts/
    sqlite3 vault.fts5.db -separator $'\t' "
      SELECT DISTINCT rel_path, description, stale_after
      FROM notes_fts
      WHERE rel_path IN (SELECT rel_path FROM notes_fts
                         WHERE notes_fts MATCH '<topic keyword> OR <synonym>'
-                          AND instr(rel_path,'verdicts/') = 1)
+                          AND (instr(rel_path,'verdicts/') = 1
+                               OR instr(rel_path,'<scope>/verdicts/') = 1))   -- one OR per root
        AND description != '' AND stale_after != ''
        AND status != 'deprecated' AND superseded_by = ''
      ORDER BY stale_after LIMIT 5;"
@@ -94,7 +96,7 @@ A 150K-char file consumes ~42K tokens — 4.2% of a 1M context window. Three suc
 
    - **A card covers the question and `stale_after` is in the future** → **that is the answer. Do not re-research and do not run Stage 5.** Read the card, answer from it, cite it. Say in the Grounding summary that a live verdict card short-circuited the pipeline and give its expiry date. Running a fresh investigation here does not just waste budget — it can silently contradict a ruling the user already accepted.
    - **A card covers it but `stale_after` has passed** → do **not** re-investigate the whole topic. Open the card's *appeal* section (the "what would overturn this" slot) and check **only those conditions**, via Stage 5 if needed. That is the entire re-research surface of an expired card.
-   - **A card covers it but is `status: draft` / `human_reviewed: false`** → the Stage 1 content query below filters it out, so the **hub row is the only path to it.** Use the card as provisional context, flag it as unpromoted, and continue to the normal pipeline for corroboration.
+   - **A card covers it but is `status: draft` / `human_reviewed: false`** → the Stage 1 content query below filters it out, so **this step-0 lookup is the only path to it.** Use the card as provisional context, flag it as unpromoted, and continue to the normal pipeline for corroboration.
    - **No card covers it** → proceed to step 1 normally. If the session ends up doing real research, say so in the closing: this topic has no verdict card, and one could be minted.
 
    **Why the hub exists at all:** BM25 rewards term density, so a dense reference table can outrank the card that actually holds the ruling on the same subject. The hub is the deterministic backstop for that ranking failure. But a backstop is only worth its price — a router that names the domains costs a few KB and catches the same failure, while a hub that reproduces every ruling charges tens of thousands of tokens to every question in the vault, including the ones with no card at all.
@@ -345,7 +347,7 @@ If you catch yourself thinking:
 | Stage | Activity | Primary Tool | Shell Fallback | Success Criterion |
 |-------|----------|-------------|----------------|-------------------|
 | **0. Awareness** | Choose tool layer | — | — | Internal tools chosen unless pipeline needed |
-| **1.0 Verdict** | Check the settled-conclusion layer before searching | `./verdict-lookup.sh <keyword>`, or FTS5 `MATCH` + `instr(rel_path,'verdicts/')=1` (**never `LIKE`**); `Read` hub only if ≲15 KB | — | Live card → answer from it, skip Stages 2–5; expired card → check only its appeal conditions; no card → continue |
+| **1.0 Verdict** | Check the settled-conclusion layer before searching | `./verdict-lookup.sh <keyword>`, or FTS5 `MATCH` + one `instr(rel_path,'<root>/')=1` per `verdicts` folder, OR'd (**never `LIKE`**); `Read` hub only if ≲15 KB | — | Live card → answer from it, skip Stages 2–5; expired card → check only its appeal conditions; no card → continue |
 | **1. Discovery** | Narrow + rank candidate SECTIONS (multi-lang, synonym-expanded) | `Glob`, **`sqlite3 vault.fts5.db ... ORDER BY bm25`** (section rows: `rel_path + heading + line range`; superseded + deprecated excluded), `Grep` fallback | `fd -e md`, `rg -l -t md` | Sections produced + BM25-ranked; query expanded on all four axes (language / register / specificity / abbreviation) before declaring thin results; `_inbox`/`_archive`/`_answers` excluded by default (explicit opt-in only; `_answers` → `[A-crystal]` event record); ≥5 → Explore delegation |
 | **2. Map** | Heading scan of long files (skippable per-hit when Stage 1 returned the section) | `Grep ^#{1,3}\s` | **`mq '.h2'`** (preferred), `rg -n '^#{1,3}\s'` | Section line ranges identified |
 | **3. Pinpoint** | Extract cited context | `Grep -n -C 5` | `rg -n -C 5` | `file:line` citations captured |

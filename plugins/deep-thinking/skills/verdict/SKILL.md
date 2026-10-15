@@ -115,12 +115,12 @@ sqlite3 vault.fts5.db -separator $'\t' "
   SELECT DISTINCT rel_path, description, stale_after FROM notes_fts
   WHERE rel_path IN (SELECT rel_path FROM notes_fts
                      WHERE notes_fts MATCH '<keyword>'
-                       AND (instr(rel_path,'verdicts/')=1 OR instr(rel_path,'z/verdicts/')=1))
+                       AND (instr(rel_path,'verdicts/')=1 OR instr(rel_path,'<scope>/verdicts/')=1))
     AND description != '' AND stale_after != ''
   ORDER BY stale_after;"
 ```
 
-> 🔴 **The card predicate must cover every card root the vault has.** `instr()` anchored at position 1 matches only the top-level root, so a vault that also keeps a second axis of cards under a prefix — a private or scoped root — silently drops all of them and answers as though no card owned the question. Enumerate the roots once and OR them, here and anywhere else the pipeline filters for cards.
+> 🔴 **The card predicate must cover every card root the vault has.** `instr()` anchored at position 1 matches only the top-level root, so a vault that also keeps a second axis of cards under a prefix — a private or scoped root — silently drops all of them and answers as though no card owned the question. Enumerate the roots once and OR them, here and anywhere else the pipeline filters for cards. **A card root is any folder named `verdicts`, at any depth**, skipping folders that start with `.` or `_`; nothing else about the vault's layout is assumed. `verdict-lookup.sh` discovers them on every call.
 
 Three things it must handle: warn on query terms under three characters (see `ANATOMY.md`), fall back to the main checkout's index when run from a git worktree where the gitignored DB is absent, and carry `--lint` (Step 6) so the layer's rules have an observer.
 
@@ -164,6 +164,8 @@ after=$(stat -c%s <card>);  echo "Δ $((after-before)) bytes for <N> new facts"
 The **delta** asks whether you replaced or appended. A card that absorbed three facts by replacement moves by hundreds of bytes, in either direction; **if it grew by thousands, you appended.** Go back and rewrite the slot instead.
 
 The **absolute** check asks whether the card is still under the ceiling, and it is the one that gets skipped: the ceiling is written into Step 4 where cards are born small, and never re-asked in Step 3 where they grow. **A relative gate passes forever** — this is append-only in slow motion: 300 bytes × 40 amendments is a 12 KB card built entirely from individually justified, individually passing edits. Measured: **58 % of cards over the ceiling, the ten largest holding 17 % of the layer.** A card that crossed the line during *this* amendment is split during *this* session, not queued.
+
+**A card that was already over the ceiling when you opened it is not exempt — the amendment is the moment it gets split.** "I only touched one line" is how an oversize card stays oversize forever: nobody opens it except to amend it, and every amendment defers the split to a session that never comes. Measured, after the absolute gate shipped no new card crossed the ceiling, yet **18 cards that were already over it were amended across two months and left over it.** Opening an oversize card to land a fact is the cheapest moment its split will ever have: the material is loaded and the axes are fresh.
 
 > **Why the ceiling is a per-question price, not a style preference.** When a live card covers the question, the grounding pipeline stops and **reads that card whole** — that is the short-circuit the layer exists to provide. So the card's size *is* the cost of every question it answers: ~5 K tokens at the ceiling, ~30 K for a 92 KB card. Oversize cards do not merely rank badly; they tax the exact path the layer was built to make cheap.
 
@@ -239,6 +241,8 @@ sqlite3 vault.fts5.db "SELECT rel_path, heading FROM notes_fts
 
 Probe with one realistic question per touched card. **A card that does not surface is a card that does not exist.** When a probe misses, sharpen the `description` and restate the subject noun inside the body of the section that should have matched — the retrieval unit is a section, not a file.
 
+The probe proves **wording, not visibility.** It does not filter drafts, and `/ground`'s content query does (`human_reviewed != 'false'`). A draft card that tops the probe is still invisible to that query until it is promoted — `verdict-lookup.sh` lists it, but only as provisional context.
+
 ### Then check the slots, because surfacing is the easy half
 
 Memory systems resolve *what the current state is* at **91 %** and then act on it in open-ended work at **32 %**, with the correct value already visible in **67.8 %** of those failures (Stale benchmark, via arXiv 2608.01619). Finding the card is the 91 %; the answer obeying it is the 32 %, and **the slots are what closes that gap** — a branch table turns an unstated assumption into a stated rule, and `Rejects` pre-empts the option the next session would re-litigate. `Appeal` is load-bearing twice over: without it an expired card collapses back into full re-investigation, the exact cost it was minted to avoid.
@@ -251,7 +255,9 @@ Memory systems resolve *what the current state is* at **91 %** and then act on i
 ./verdict-lookup.sh --lint     # exits 1 on violations
 ```
 
-Ceiling, edit markers, dated headings, missing slots, non-card files, domain size, router hygiene — one pass. **Every rule in this skill that shipped without a check has decayed, and every rule with a machine behind it has not:** on a 178-card vault, `stale_after` coverage stood at 100 %, generated-index drift at zero and `type` violations at zero, while every prose-only rule was in breach. The two sets of rules are written with the same force. Add the check.
+Ceiling, edit markers, dated headings, missing slots, non-card files, domain size, router hygiene, axis, description length, dead tags, lineage — one pass. **Every rule in this skill that shipped without a check has decayed, and every rule with a machine behind it has not:** on a 178-card vault, `stale_after` coverage stood at 100 %, generated-index drift at zero and `type` violations at zero, while every prose-only rule was in breach. Two months later the split held again on 512 cards: the three frontmatter rules still left to prose — description length, three-character tags, `distilled_from` — stood at 48 %, 62 % and 59 % breach. The two sets of rules are written with the same force. Add the check.
+
+Read the result as a delta, not a verdict on the layer: compare the violation counts against the ones you saw before you started. An amendment is done when it **adds** none; the backlog it found is reported, not repaired in passing — except an oversize card you opened, which Step 3 makes yours.
 
 Then settle promotion **in this session**, because a later session will not come. A card left at `status: draft` / `human_reviewed: false` is filtered out of the grounding pipeline it exists to short-circuit, so the next session re-researches the topic anyway. Report the open items, then ask outright whether to promote, naming what a human would be signing off on.
 

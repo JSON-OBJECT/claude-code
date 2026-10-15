@@ -33,7 +33,10 @@
 # machine behind it held (stale_after coverage 100%, generated-index drift 0, type
 # contract violations 0) and every rule that existed only as prose had decayed
 # (ceiling 56% breach, mandatory slots ~31% missing). Writing the rule more forcefully
-# does not close that gap. This is the observer.
+# does not close that gap. This is the observer. Two months later the same split held
+# on a 512-card vault for the three frontmatter rules that still had no check
+# (description length 48% breach, dead tags on 62% of cards, lineage missing on 59%),
+# which is why [9]–[11] exist.
 set -euo pipefail
 
 # --- Locate the index, including from a git worktree --------------------------
@@ -66,11 +69,17 @@ today="$(date +%F)"
 # such as `<scope>/verdicts/`. A predicate anchored to one root silently drops the
 # others and answers as though no card owned the question — the most expensive
 # failure this layer has, because it is invisible. Discover every root, then OR them.
+#
+# The name is the whole contract: any folder called `verdicts`, at any depth, is a card
+# root. Folders starting with `.` or `_` are skipped (tooling, archives, inboxes — the
+# same folders the indexer excludes), and a `verdicts/` nested inside another root is
+# part of that root, not a second one. The vault's other folders are never named here,
+# so the layer does not depend on how the rest of the vault is organised.
 mapfile -t CARD_ROOTS < <(
-  { [[ -d "$here/verdicts" ]] && echo "verdicts/"
-    find "$here" -mindepth 2 -maxdepth 2 -type d -name verdicts -not -path '*/.*' 2>/dev/null \
-      | sed "s|^$here/||;s|$|/|"
-  } | sort -u
+  find "$here" -mindepth 1 -type d \( -name '.*' -o -name '_*' \) -prune \
+       -o -type d -name verdicts -print 2>/dev/null \
+    | sed "s|^$here/||;s|$|/|" | LC_ALL=C sort \
+    | awk '{ for (i = 1; i <= n; i++) if (index($0, kept[i]) == 1) next; kept[++n] = $0; print }'
 )
 [[ ${#CARD_ROOTS[@]} -eq 0 ]] && { echo "[FATAL] no verdicts/ root found under $here" >&2; exit 1; }
 
@@ -135,9 +144,18 @@ T = {
 L = T.get(os.environ.get("VERDICT_INDEX_LANG", "en"), T["en"])
 
 # Same root discovery as the shell side: verdicts/ plus any <scope>/verdicts/.
-bases = [root / "verdicts"] + sorted(
-    d for d in root.glob("*/verdicts") if d.is_dir() and not d.parts[-2].startswith("."))
-bases = [b for b in bases if b.is_dir()]
+# Same root discovery as the shell side: every folder named `verdicts` at any depth,
+# skipping `.`/`_` folders and roots nested inside another root.
+def card_roots(top):
+    found = []
+    for dp, dns, _ in os.walk(top):
+        dns[:] = sorted(d for d in dns if not d.startswith((".", "_")))
+        here_ = pathlib.Path(dp)
+        if here_ != top and here_.name == "verdicts":
+            found.append(here_)
+            dns[:] = []          # a root's own subfolders are domains, not roots
+    return sorted(found, key=lambda b: (b != top / "verdicts", b.as_posix()))
+bases = card_roots(root)
 
 def fm(text):
     m = re.match(r"\A---\n(.*?)\n---\n", text, re.S)
@@ -166,11 +184,22 @@ def label(base, spot):
     prefix = base.relative_to(root).as_posix()          # "verdicts" or "<scope>/verdicts"
     return name if prefix == "verdicts" else f"{prefix.rsplit('/verdicts',1)[0]}/{name}"
 
+# Match the domain argument against the full label first ("vault" vs "<scope>/vault").
+# Falling back to the bare folder name is only safe when it is unambiguous: a scoped
+# root that mirrors a public domain name would otherwise be regenerated alongside it.
+labels = {label(base_of(s), s): s for s in spots}
+if only and only not in labels:
+    by_name = [l for l, s in labels.items() if s.name == only]
+    if len(by_name) > 1:
+        print(f"[!] '{only}' is ambiguous: {', '.join(sorted(by_name))}. Pass the full label.", file=sys.stderr)
+        sys.exit(1)
+    only = by_name[0] if by_name else only
+
 domains, home = collections.defaultdict(list), {}
 for spot in spots:
     base = base_of(spot)
     name = label(base, spot)
-    if only and name != only and spot.name != only: continue
+    if only and name != only: continue
     home[name] = spot
     nested = {s for s in spots if s != spot and spot in s.parents}
     for p in sorted(spot.rglob("*.md")):
@@ -210,7 +239,7 @@ PY
     exit 0 ;;
   --lint)
     python3 - "$here" <<'PY'
-import sys, re, pathlib, datetime
+import sys, re, os, pathlib, datetime
 
 root = pathlib.Path(sys.argv[1])
 today = datetime.date.today().isoformat()
@@ -221,15 +250,27 @@ ROUTER_MAX   = 12 * 1024   # verdicts.md is charged to every question, so it is 
 ROUTER_ROW   = 160         # one domain row. A row that became a paragraph is a mirrored ruling
 DOMAIN_CARDS = 20          # per domain. Over it, cut into subdomains
 DOMAIN_BYTES = 300 * 1024
+DESC_MIN, DESC_MAX = 40, 140  # description carries the ruling and is printed on every lookup hit
+MIN_TOKEN    = 3           # the trigram tokenizer indexes nothing shorter
+HEADROOM     = 0.97        # warn when a fixed-cost file is this close to its limit
 
 MARKERS = re.compile(r"🆕|🔄|✏️|\bupdated\b|\bnew!\b|\(new\)|addendum|as of this session")
 # A section titled with a date is the same violation as an inline edit marker, one
 # level up: it is where a card stops being state and becomes a log.
 DATE_HEAD = re.compile(r"^#{2,4}\s+\W{0,4}(20\d\d[-.]\s?)?\d{1,2}[-./]\d{1,2}\b")
 
-bases = [root / "verdicts"] + sorted(
-    d for d in root.glob("*/verdicts") if d.is_dir() and not d.parts[-2].startswith("."))
-bases = [b for b in bases if b.is_dir()]
+# Same root discovery as the shell side: every folder named `verdicts` at any depth,
+# skipping `.`/`_` folders and roots nested inside another root.
+def card_roots(top):
+    found = []
+    for dp, dns, _ in os.walk(top):
+        dns[:] = sorted(d for d in dns if not d.startswith((".", "_")))
+        here_ = pathlib.Path(dp)
+        if here_ != top and here_.name == "verdicts":
+            found.append(here_)
+            dns[:] = []          # a root's own subfolders are domains, not roots
+    return sorted(found, key=lambda b: (b != top / "verdicts", b.as_posix()))
+bases = card_roots(root)
 files = sorted(p for b in bases for p in b.rglob("*.md"))
 
 def fm(t):
@@ -340,15 +381,109 @@ if hub.is_file():
         print(f"  !!  {len(wip)} work-in-progress section(s) — move out of the hot path: {wip[0].strip()}"); ok = False
     if ok:
         print(f"  OK  {hb/1024:.1f} KB · longest row {max((len(l) for l in rows), default=0)} chars · no markers")
+        # Passing with no headroom is a trap: the next ordinary amendment — one more
+        # domain, one edited row — fails the gate and gets blamed on that edit.
+        if hb > ROUTER_MAX * HEADROOM:
+            print(f"  ..  only {ROUTER_MAX - hb} bytes of headroom — trim rows now, before an amendment trips it")
     else:
         viol["router"] = 1
 else:
     print("  --  no verdicts.md router yet")
 
+print("\n[8] Axis — the public root may never link into a scoped root; the reverse is always fine")
+# A vault may keep scoped card roots (<scope>/verdicts/) for material that must not
+# travel with the public one. A public-root link into <scope>/ is two defects at once:
+# it dies wherever the public root is exported alone (so the breakage is never seen),
+# and the path string itself discloses that a scoped file exists and what it is called.
+# A scope is everything above a non-top-level root: `private/verdicts/` -> "private",
+# `teams/a/verdicts/` -> "teams/a". Links into anything under that prefix are flagged.
+scopes = sorted(b.parent.relative_to(root).as_posix() for b in bases if b != root / "verdicts")
+if scopes:
+    LINK = re.compile(r"\[[^\]]*\]\(([^)\s]+)\)")
+    pub = [root / "verdicts.md"] + sorted((root / "verdicts").rglob("*.md"))
+    axis = []
+    for f in pub:
+        if not f.is_file():
+            continue
+        for i, line in enumerate(f.read_text(errors="ignore").splitlines(), 1):
+            for t in LINK.findall(line):
+                b = t.split("#")[0]
+                if not b or t.startswith(("http://", "https://", "mailto:")):
+                    continue
+                try:
+                    tgt = (f.parent / b).resolve().relative_to(root.resolve()).as_posix()
+                except ValueError:
+                    continue
+                if any(tgt == s or tgt.startswith(s + "/") for s in scopes):
+                    axis.append((i, f"{f.relative_to(root)} -> {tgt}"))
+    if axis:
+        report("axis", f"public-root links into {', '.join(s + '/' for s in scopes)} — de-link, or move the card to the scoped root",
+               axis, top=6)
+    else:
+        print(f"  OK  {sum(f.is_file() for f in pub)} public-root files · no link crosses into {', '.join(s + '/' for s in scopes)}")
+else:
+    print("  --  no scoped root")
+
+print(f"\n[9] Description — {DESC_MIN}–{DESC_MAX} chars. It is the ruling, printed on every lookup hit")
+# A description that outgrew one line is the router-row failure at card level: the
+# ruling's argument leaks into the field every lookup prints, and every hit pays for it.
+desc = []
+for r, t, _ in cards:
+    d = fm(t).get("description", "").strip().strip("\"'")
+    if not (DESC_MIN <= len(d) <= DESC_MAX):
+        desc.append((len(d), r))
+report("description", f"descriptions outside {DESC_MIN}–{DESC_MAX} chars", sorted(desc, reverse=True), " ch")
+
+print(f"\n[10] Dead tags — a tag under {MIN_TOKEN} characters is never indexed, so no query reaches it")
+def tags_of(t):
+    m = re.match(r"\A---\n(.*?)\n---\n", t, re.S)
+    if not m:
+        return []
+    inline = re.search(r"^tags:\s*\[(.*?)\]", m.group(1), re.M)
+    if inline:
+        raw = inline.group(1).split(",")
+    else:
+        block = re.search(r"^tags:\s*\n((?:\s*-\s*.*\n?)+)", m.group(1), re.M)
+        raw = re.findall(r"-\s*(.*)", block.group(1)) if block else []
+    return [x.strip().strip("\"'") for x in raw if x.strip()]
+dead = []
+for r, t, _ in cards:
+    short = [x for x in tags_of(t) if len(x) < MIN_TOKEN]
+    if short:
+        dead.append((len(short), f"{r}  [{', '.join(short[:4])}{' …' if len(short) > 4 else ''}]"))
+report("dead_tags", "cards carrying unreachable tags — lengthen into a compound", sorted(dead, reverse=True))
+
+print("\n[11] Lineage — distilled_from must exist, and a file it names must be there")
+# The skill discards narrative because distilled_from and git already own it. A card
+# with no distilled_from, or one naming a file that is gone, has made that claim with
+# nothing behind it. A path into a top-level folder this vault does not have is
+# skipped: the source lives in another vault that received only the cards.
+# A value that names no file at all (a harvested conversation) is counted, not failed:
+# git still holds the card's history, but the thread itself is unrecoverable.
+PATHISH = re.compile(r"[^\s`'\"()\[\],·]+\.md\b")
+lineage, textual = [], 0
+for r, t, _ in cards:
+    v = fm(t).get("distilled_from", "").strip().strip("\"'")
+    if not v:
+        lineage.append(("none", r))
+        continue
+    paths = [p.split("#")[0] for p in PATHISH.findall(v)]
+    if not paths:
+        textual += 1
+        continue
+    present = [p for p in paths if (root / p.split("/")[0]).exists()]
+    if present and not any((root / p).is_file() for p in present):
+        lineage.append(("gone", f"{r}  ({present[0]})"))
+report("lineage", "cards whose lineage does not resolve (none = missing · gone = named file not found)",
+       sorted(lineage))
+if textual:
+    print(f"  ..  {textual} card(s) name no file (e.g. a harvested conversation) — git holds the card, not the thread")
+
 print("\n" + "=" * 60)
 if viol:
     print("!! violations: " + " · ".join(f"{k} {v}" for k, v in viol.items()))
-    print("   order of repair: [5] admission → [1] ceiling + [3] chronology → [7] router → [4] slots → [2] markers")
+    print("   order of repair: [8] axis → [5] admission → [1] ceiling + [3] chronology → [7] router"
+          " → [4] slots → [11] lineage → [9] description + [10] dead tags → [2] markers")
     sys.exit(1)
 print("OK — no violations")
 PY
