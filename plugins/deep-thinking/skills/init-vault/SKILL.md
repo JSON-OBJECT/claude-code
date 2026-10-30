@@ -70,8 +70,7 @@ The vault root is `$ARGUMENTS` if a path was given, otherwise the current workin
 
    Check each with `command -v`; then install ONLY the missing ones. With Homebrew (macOS / Linux / WSL alike):
    ```bash
-   brew install <missing tools among: fd ripgrep bat sd fzf scc tokei yq glow lychee sqlite>
-   brew install harehare/tap/mq   # mq lives in a tap, not core
+   brew install <missing tools among: fd ripgrep bat sd fzf scc tokei yq glow lychee sqlite mq>
    ```
    Missing tools do not hard-block setup — `/ground` has internal-tool fallbacks — but a vault initialized without `mq` and `sqlite3` runs the pipeline degraded, so install unless the user declines or no package manager exists (then list the leftovers in the report with the command above as the remedy).
    **macOS PATH caveat:** Homebrew's `sqlite` is keg-only; ensure `$(brew --prefix)/opt/sqlite/bin` precedes the system path so `sqlite3` resolves to the FTS5-capable binary.
