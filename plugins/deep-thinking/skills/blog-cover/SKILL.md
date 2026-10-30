@@ -1,7 +1,8 @@
 ---
+name: blog-cover
 description: Use when creating blog cover images with Gemini - generates anti-AI-looking, context-rich editorial prompts
 allowed-tools: Read
-argument-hint: [blog-title] [key-concept]
+argument-hint: '[blog-title] [key-concept]'
 ---
 
 # Blog Cover Image Prompt Generator for Gemini (Nano Banana Pro)

@@ -1,4 +1,5 @@
 ---
+name: meeting-notes
 description: Use when transforming meeting transcripts into actionable documentation - produces narrative-driven meeting notes with counterparty intelligence, immediate inline terminology, multi-source verification, and flowing prose that reads like a tech magazine briefing
 ---
 

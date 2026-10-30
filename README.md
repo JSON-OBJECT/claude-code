@@ -175,7 +175,7 @@ When a new plugin version is published (e.g. `1.1.0 → 1.2.0`), apply it to the
 
 With `autoUpdate: true` on the marketplace (default), Claude Code also refreshes it automatically on launch — the two commands above just apply the update immediately instead of waiting for the next start.
 
-### Commands
+### Skills
 
 #### `/deep-thinking:pulse {topic}` — Trend Radar
 > **Before you research, know WHAT to research.**
@@ -355,8 +355,8 @@ Transforms any natural-language seed (any language, any length) into an `sd-dyna
 
 ### MCP Server Dependencies
 
-| Command | Required | Optional |
-|---------|----------|----------|
+| Skill | Required | Optional |
+|-------|----------|----------|
 | `/deep-thinking:pulse` | Time, Brave Search, Reddit | - |
 | `/deep-thinking:deep-research` | Time, Brave Search, Reddit | - |
 | `/deep-thinking:forge-prompt` | None | - |

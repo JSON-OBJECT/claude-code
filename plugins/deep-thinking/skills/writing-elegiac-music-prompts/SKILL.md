@@ -1,4 +1,5 @@
 ---
+name: writing-elegiac-music-prompts
 description: Forge an AI-music-generation prompt (Suno, Udio, or any text-to-music model) in the "Waltz on the Ruins" mood — dignified elegiac Japanese film-score piano over a swelling acoustic orchestra — from any natural-language seed, with structure map, negative directives, and a 9-point QA checklist
 argument-hint: [optional seed — a scene, theme, or feeling in any language; blank = pure mood]
 disable-model-invocation: false

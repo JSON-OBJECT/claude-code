@@ -1,4 +1,5 @@
 ---
+name: ground
 description: Generate grounded answers from local markdown archive (5-Stage pipeline)
 allowed-tools: Glob, Grep, Read, Bash, Agent, Edit, Write
 argument-hint: <question or topic>

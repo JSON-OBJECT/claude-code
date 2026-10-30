@@ -1,7 +1,8 @@
 ---
+name: init-vault
 description: Use when turning a folder of markdown files (or an empty folder) into an LLM Wiki vault for the deep-thinking pipeline — verifies the FTS5 trigram runtime per OS, installs fts5-reindex.py and verdict-lookup.sh, scaffolds convention folders, git-inits with .gitignore, appends the vault protocol to CLAUDE.md non-destructively, builds vault.fts5.db, and proves it with a BM25 smoke query
 allowed-tools: Glob, Grep, Read, Bash, Write, Edit
-argument-hint: [target-directory] (defaults to current working directory)
+argument-hint: '[target-directory] (defaults to current working directory)'
 ---
 
 # Initialize an LLM Wiki Vault

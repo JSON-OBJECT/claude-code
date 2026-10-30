@@ -1,4 +1,5 @@
 ---
+name: hidden-reality
 description: Use when generating, verifying, or defending "Hidden Reality" software ideas - the design doctrine where engineering technology is deliberately wasted on imperfection, friction, slowness, and anti-utility to produce strange/beautiful/cute/uncanny experiences instead of efficiency. Handles blank-input idea suggestion, idea verification, doctrine meta-questions, real-world example scouting, inspiration source recommendations, doctrine defense, and 2-week prototype scoping.
 ---
 

@@ -1,4 +1,5 @@
 ---
+name: save-answer
 description: Use when the user asks to save/preserve the previous answer ("이 답변 저장해", "이거 저장해", "save this answer", "이 답변 보관해") right after a grounded or researched answer — archives the question-answer pair VERBATIM as one md file in the vault's `_answers/` folder, which is permanently excluded from FTS5 indexing and /ground's default search (retrievable only on explicit user opt-in, as an `[A-crystal]` event record — never as topic evidence) so LLM-synthesized answers never feed back into LLM sources
 allowed-tools: Read, Write, Bash, Grep, Glob
 argument-hint: [optional slug override]

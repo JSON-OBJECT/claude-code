@@ -1,4 +1,5 @@
 ---
+name: blog
 description: Use when writing IT tech blog articles - 16-year veteran blogger framework ensuring fact-based, source-cited content with mandatory bullet point formatting and inline hyperlinks
 ---
 
@@ -248,7 +249,7 @@ According to [Source Name]'s benchmark on [hardware], [results]. [Link]
 **Specific facts MUST have `[[Link]](URL)` immediately after:**
 
 ```markdown
-* **Claude Opus 4.5** costs $15 per 1M input tokens. [[Link]](https://anthropic.com/pricing)
+* **Claude Opus 4.5** costs \$15 per 1M input tokens. [[Link]](https://anthropic.com/pricing)
 * The model achieves 92.3% on MMLU benchmark. [[Link]](https://arxiv.org/paper-id)
 * One developer's blog suggests batch processing for throughput. [[Personal Blog]](https://someone.dev/tips)
 ```
@@ -565,7 +566,7 @@ val variable: Type = Class.builder()
 - Short sentences: one key point per sentence
 
 ### Specific Numbers (MANDATORY)
-✅ Good: "128K input tokens", "US$10.00 per 1M tokens", "3.0× speedups"
+✅ Good: "128K input tokens", "US\$10.00 per 1M tokens", "3.0× speedups"
 ❌ Bad: "large context window", "much faster", "significant improvement"
 
 ### Comparison Expressions
@@ -677,7 +678,7 @@ The conclusion is NOT a summary. It is the author's **analytical perspective** t
 
 | Element | Format | Example |
 |---------|--------|---------|
-| Fact citation (Tier 1-2) | `[[Link]](URL)` | `costs $15 [[Link]](url)` |
+| Fact citation (Tier 1-2) | `[[Link]](URL)` | `costs \$15 [[Link]](url)` |
 | Fact citation (Tier 3) | `[[Personal Blog]](URL)` | `suggests X [[Personal Blog]](url)` |
 | Fact citation (Tier 4) | `[[Reddit]](URL)` | `users report [[Reddit]](url)` |
 | **Direct quote (Reddit)** | `> "quote" — u/user, r/sub [[Link]]` | See blockquote format below |

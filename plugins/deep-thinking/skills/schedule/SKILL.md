@@ -1,7 +1,8 @@
 ---
+name: schedule
 description: Use when creating or refactoring schedule/calendar markdown files into ground-truth indexes — produces month-anchored, bookmark-style documents optimized for grounding, RAG retrieval, and chunk-based parsing instead of narrative-stuffed tables
 allowed-tools: Read, Glob, Grep, Write, Edit, Bash(git:*), Bash(wc:*), Bash(awk:*), Bash(grep:*), Bash(ls:*), Bash(find:*), Bash(mkdir:*), Bash(mv:*), Bash(rm:*), Bash(diff:*), TodoWrite
-argument-hint: [path-to-file-or-directory] [--mode=create|refine|audit] [--scope=year|brand|project]
+argument-hint: '[path-to-file-or-directory] [--mode=create|refine|audit] [--scope=year|brand|project]'
 ---
 
 # Writing a Schedule Index

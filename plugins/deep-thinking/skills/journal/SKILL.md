@@ -1,7 +1,8 @@
 ---
+name: journal
 description: Use when the user dumps raw, unstructured thoughts/insights/memories to record, or asks to refine or promote past journal entries — turns the dump into clean, lineage-aware, ground-searchable (day × topic) chapters in the monthly insight log
 allowed-tools: Read, Glob, Grep, Write, Edit, Bash(git:*), Bash(wc:*), Bash(awk:*), Bash(grep:*), Bash(ls:*), Bash(find:*), Bash(mkdir:*), Bash(sqlite3:*), Bash(python3:*), Bash(date:*), mcp__time__get_current_time, TodoWrite
-argument-hint: "<raw thoughts>" [--mode=add|refine|promote|review]
+argument-hint: '"<raw thoughts>" [--mode=add|refine|promote|review]'
 ---
 
 # Writing a Journal Entry

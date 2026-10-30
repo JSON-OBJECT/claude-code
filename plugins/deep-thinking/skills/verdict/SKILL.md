@@ -1,7 +1,7 @@
 ---
 name: verdict
 description: Distil a finished thread into verdict cards — compact, binding conclusions a future session reads instead of re-researching the topic. Builds the layer on first run.
-disable-model-invocation: true
+when_to_use: When the user asks to file, land, or amend a settled conclusion as a verdict card ("카드로 남겨", "결론 반영해", "verdict 해줘", "file this as a verdict"), or names an _answers/ file to distil. Never self-trigger mid-research or on an unsettled thread. New cards land as draft and only the user's approval promotes them to stable.
 allowed-tools: Read, Write, Edit, Bash, Grep, Glob
 argument-hint: "[optional: path to an _answers/ file — blank harvests this conversation]"
 ---

@@ -1,4 +1,5 @@
 ---
+name: forge-prompt
 description: Create bulletproof instructions/custom-commands/skills following the Superpowers philosophy - strong language, mandatory checklists, anti-rationalization tables, and iron laws
 ---
 
@@ -343,8 +344,8 @@ Prompt body goes here.
 
 | Syntax | Captures |
 |--------|----------|
-| `$ARGUMENTS` | All arguments as single string |
-| `$1`, `$2`, `$3` | Positional arguments |
+| `\$ARGUMENTS` | All arguments as single string |
+| `\$1`, `\$2`, `\$3` | Positional arguments |
 
 ---
 

@@ -1,4 +1,5 @@
 ---
+name: writing-z-image-turbo-prompts
 description: Forge a ZIT (Z-Image-Turbo) photorealism prompt from any natural-language seed — outputs sd-dynamic-prompts mustache template implementing the 90hex 11-slot doctrine
 argument-hint: [natural-language seed — any length, any language]
 disable-model-invocation: false

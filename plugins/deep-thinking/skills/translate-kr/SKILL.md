@@ -1,4 +1,5 @@
 ---
+name: translate-kr
 description: Use when translating English IT articles to Korean - transcreation framework that eliminates translation artifacts
 ---
 

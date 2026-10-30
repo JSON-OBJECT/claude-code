@@ -1,4 +1,5 @@
 ---
+name: deep-research
 description: Comprehensive deep research with multi-source analysis and Ki-Sho-Ten-Ketsu structured report
 ---
 

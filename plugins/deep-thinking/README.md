@@ -26,18 +26,20 @@ Apply a new plugin version to the current Claude Code session without a restart:
 
 With `autoUpdate: true` on the marketplace (default), refresh also happens automatically at Claude Code launch.
 
-## Commands
+## Skills
 
-### LLM Wiki Commands
+Every entry below is a skill (`skills/<name>/SKILL.md`). Since 1.24.0 the plugin ships no `commands/` files — Claude Code merged custom commands into skills, so each one still runs by name as `/deep-thinking:<name>`, and Claude can also pick it up from a matching request unless its frontmatter sets `disable-model-invocation: true` (only the two prompt-forging skills do).
 
-These commands turn a folder of markdown notes into an **LLM Wiki vault** — a grounded knowledge base with a section-level FTS5 BM25 index (`vault.fts5.db`) — and operate on it. Run `init-vault` once; the rest work inside the vault, in roughly this lifecycle order.
+### LLM Wiki Skills
+
+These skills turn a folder of markdown notes into an **LLM Wiki vault** — a grounded knowledge base with a section-level FTS5 BM25 index (`vault.fts5.db`) — and operate on it. Run `init-vault` once; the rest work inside the vault, in roughly this lifecycle order.
 
 Vault frontmatter follows an **OKF-compatible contract** ([Google Cloud Open Knowledge Format](https://github.com/GoogleCloudPlatform/knowledge-catalog/blob/main/okf/SPEC.md)): every concept file carries the v0.1 required trio `type` / `description` / `timestamp`, plus two optional v0.2 keys — `stale_after` (re-verify-after date) and `status` (`draft`/`stable`/`deprecated`) — with the pipeline's provenance keys (`generated_by`, `human_reviewed`, `supersedes`, `superseded_by`) as OKF extension keys. `fts5-reindex.py` indexes all five — `type`/`timestamp`/`stale_after`/`status` as filterable columns, `description` as a searchable column — so `/ground` can filter by document kind, drop retired documents, and match curated summaries.
 
 `stale_after` exists to keep review finite: `human_reviewed: false` never expires and therefore only accumulates, while a date turns the backlog into a queue you can actually work — review what expired, not everything.
 
-| Command | Description |
-|---------|-------------|
+| Skill | Description |
+|-------|-------------|
 | `/deep-thinking:init-vault [directory]` | Transform any folder of markdown files (or an empty folder) into an LLM Wiki vault in one shot — per-OS FTS5 trigram preflight, pipeline CLI install, `fts5-reindex.py` deployment, `_inbox/`/`_archive/`/`_answers/` scaffolding, `git init` + `.gitignore`, non-destructive CLAUDE.md vault protocol with command routing, and a BM25 smoke-query verification |
 | `/deep-thinking:ground {question}` | 5-stage pipeline (Discovery → Map → Pinpoint → Verify → Augment) that grounds answers in the local `.md` archive with mandatory `file:line` citations; web augmentation only for proven gaps |
 | `/deep-thinking:journal "{raw thoughts}"` | Turn a raw thought-dump into a clean, lineage-aware, ground-searchable entry in the monthly insight log — supports add, refine, promote, and review modes |
@@ -45,13 +47,14 @@ Vault frontmatter follows an **OKF-compatible contract** ([Google Cloud Open Kno
 | `/deep-thinking:deep-research {topic}` | Comprehensive multi-source research with 15+ searches, Reddit/news cross-validation, and Ki-Sho-Ten-Ketsu structured report — the primary way new long-form source documents enter the vault |
 | `/deep-thinking:lint [scope]` | Vault health check — report-only lint that audits contradictions, supersession lineage, broken links, frontmatter provenance, and index freshness without mutating a single vault file |
 | `/deep-thinking:save-answer` | Archive the previous grounded answer verbatim into `_answers/` — a quarantine folder permanently excluded from `/ground` and FTS5 indexing, so LLM-synthesized answers never feed back into LLM sources |
+| `/deep-thinking:verdict [_answers/ file]` | Distil a settled thread into verdict cards — binding conclusions a future session obeys instead of re-researching, with rejects, appeal conditions, and a `stale_after` expiry. Runs on request ("file this as a verdict"); new cards land as `draft` and only the user's approval promotes them to `stable` |
 
-### General Commands
+### General Skills
 
 Standalone research, writing, and creative utilities — no vault required.
 
-| Command | Description |
-|---------|-------------|
+| Skill | Description |
+|-------|-------------|
 | `/deep-thinking:pulse {topic}` | Trend radar scanning 5+ subreddits and 75+ posts to identify hot issues before deep research |
 | `/deep-thinking:forge-prompt {instruction}` | Create bulletproof instructions/skills with Iron Laws, anti-rationalization tables, and mandatory checklists |
 | `/deep-thinking:meeting-notes {transcript}` | Transform meeting transcripts into narrative-driven documentation with counterparty research and verified terminology |
@@ -61,9 +64,9 @@ Standalone research, writing, and creative utilities — no vault required.
 | `/deep-thinking:writing-z-image-turbo-prompts {seed}` | Forge a Z-Image-Turbo (ZIT) photorealism prompt from any natural-language seed — outputs an sd-dynamic-prompts mustache template implementing the 90hex 11-slot doctrine (camera body + film stock + anti-AI 4-stack) |
 | `/deep-thinking:hidden-reality {idea or topic}` | Anti-optimization idea forge — suggests, verifies, or defends "Hidden Reality" software ideas against an 11-mechanism doctrine (imperfection, friction, anti-utility, defamiliarization, scale violation, etc.) with academic backbone (Tega Brain, 한병철, Shklovsky, Dunne & Raby) and a 2-week prototype scope |
 
-## Skills
+### Mood & Feel Skills
 
-Skills activate automatically when their trigger conditions match — no slash command needed.
+These activate on their own when the request matches — no slash command needed.
 
 | Skill | Description |
 |-------|-------------|
@@ -116,8 +119,8 @@ Skills activate automatically when their trigger conditions match — no slash c
 
 ### MCP Server Dependencies
 
-| Command | Required | Optional |
-|---------|----------|----------|
+| Skill | Required | Optional |
+|-------|----------|----------|
 | `/deep-thinking:init-vault` | None | - |
 | `/deep-thinking:ground` | None | Brave Search, Reddit, Fetch (Stage 5 gap-filling only) |
 | `/deep-thinking:journal` | Time | - |

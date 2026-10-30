@@ -1,4 +1,5 @@
 ---
+name: pulse
 description: Use when needing to identify what's trending before deep research - discovers hot issues via multi-subreddit analysis to target valuable research topics
 ---
 
