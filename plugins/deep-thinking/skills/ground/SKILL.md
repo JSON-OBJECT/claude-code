@@ -42,18 +42,16 @@ A 150K-char file consumes ~42K tokens — 4.2% of a 1M context window. Three suc
 
 2. **Shell modern CLI** (via `Bash`, when a pipeline is required)
    - `fd` (NEVER `find`), `rg` (NEVER `grep`), `bat`, `sd`, `fzf`, `scc`/`tokei`
-   - **`mq`** — jq for Markdown: AST-level heading/link/code-block extraction (`mq '.h2' file.md`)
+   - **`mq`** — jq for Markdown: AST-level heading/link/code-block extraction (`mq '.h2' file.md`, or a whole section by title with `mq -A 'section::section("Title")' file.md`). Needed only when the vault has no `vault.fts5.db` — the index already carries every section's heading and line range
    - **`yq --front-matter="extract"`** — YAML frontmatter field extraction from `.md` files
    - **`glow`** — terminal markdown renderer for visual verification
    - **`lychee`** — async link validator for archive maintenance (`lychee "**/*.md"`)
    - If `~/.ripgreprc` exists with `--type-add=research:*.md`, use `rg --type research` for markdown-only searches
 
-3. **MCP semantic search** (for natural-language queries when keyword search fails)
-   - `qmd` (MCP server) — BM25 + vector semantic search over markdown archives
-   - `markdown-vault-mcp` — frontmatter-aware indexed search
-   - `mq-mcp` — markdown AST queries via MCP
+3. **Semantic search** (only if the vault has set it up)
+   - `qmd` (CLI + MCP, local) — BM25 + vector + LLM re-ranking over markdown (`qmd query "<question>"`). Its default embedding model is English-optimized; a Korean or other CJK vault needs `QMD_EMBED_MODEL` pointed at Qwen3-Embedding.
 
-**Rule:** Default to internal tools. Drop to shell for pipelines (`rg -l … | xargs sd …`) or features internal tools lack. Use MCP semantic search only when Stage 1 keyword search returns zero after synonym/multilingual attempts.
+**Rule:** Default to internal tools. Drop to shell for pipelines (`rg -l … | xargs sd …`) or features internal tools lack. Use semantic search only when Stage 1 keyword search returns zero after synonym/multilingual expansion **and** the short-term fallback below — an unexpanded or sub-3-character query is the usual cause of a zero, not a missing meaning match.
 
 ### Stage 1 — Discovery (Narrow the Candidate Set)
 
@@ -124,6 +122,17 @@ A 150K-char file consumes ~42K tokens — 4.2% of a 1M context window. Three suc
      Each row in the DB is a **section** (split at H1–H3 boundaries, code fences respected), not a whole file. A hit therefore returns `rel_path + heading + line range` in one query — Stage 1 discovery, the Stage 2 heading map for that hit, and Stage 3 pinpointing collapse into a single call. BM25 ranks by keyword density (TF-IDF) at section granularity, so a 150K-char mega-file no longer competes as one giant document. This is the single biggest context-budget saver Stage 1 offers.
      - `AND superseded_by = ''` excludes stale documents that have been explicitly replaced (see the supersession contract in Stage 4). Drop this clause only when the user asks for document history/lineage.
      - **OKF type filter (when the vault follows the OKF frontmatter contract):** the `type` column carries each file's OKF kind (`deep-research`, `canon`, `doctrine-canon`, `playbook`, `journal-log`, `schedule-index`, `guide`, `report`, `note`, …). Combine it with the question-type-aware filtering rule below: interpretive questions → `AND type IN ('canon', 'doctrine-canon')` first; factual/how-to → `guide`/`playbook`/`report` first; fall back to no filter when the typed slice returns 0. The `description` column (the file's curated one-line summary, riding only the first section row) is searchable — a description hit is a strong file-level relevance signal even when the keyword is sparse in the body.
+   - **Terms under three characters never reach `MATCH` — route them to `instr()`.** The trigram tokenizer does not index tokens shorter than three characters, so `MATCH '<2-char term>'` returns zero rows **without an error**. In Korean, Chinese, and Japanese that is the ordinary vocabulary — measured on a Korean vault: `MATCH '볼트'` → 0 rows, `instr(body,'볼트')` → 1,434 sections; `MATCH '안경'` → 0, `instr` → top hits exactly on point. Split the expanded term list: terms of ≥3 characters go into the BM25 query above; every shorter term runs as its own scan (≈0.1 s over 26K sections), ranked by heading hits first, then occurrence count:
+     ```bash
+     sqlite3 vault.fts5.db -separator $'\t' "
+       SELECT rel_path, heading, start_line || '-' || end_line,
+              (length(body) - length(replace(body,'<short>',''))) / length('<short>') AS hits
+       FROM notes_fts
+       WHERE (instr(body,'<short>') > 0 OR instr(heading,'<short>') > 0)
+         AND human_reviewed != 'false' AND superseded_by = '' AND status != 'deprecated'
+       ORDER BY (instr(heading,'<short>') > 0) DESC, hits DESC LIMIT 10;"
+     ```
+     Merge the two lists before Stage 2. `bm25()` is only valid inside a `MATCH` query, so do not try to fold the short term into the same statement with `OR`.
    - **Fallback when DB absent or returns 0** (DB may be stale; run `python3 fts5-reindex.py` — a few seconds for a few hundred files):
      - Internal: `Grep` with `pattern=<keyword>`, `output_mode="files_with_matches"`, `type="md"`
      - Shell: `rg -l -t md '<keyword>'`
@@ -138,7 +147,7 @@ A 150K-char file consumes ~42K tokens — 4.2% of a 1M context window. Three suc
    - **Distinguish "no dedicated file" from "merely mentioned in passing."**
    - `Glob` = 0 AND `Grep` results only contain passing mentions (keyword NOT in H1~H3 headings) → topic absent, Stage 5 authorized
    - `Glob` = 0 BUT `Grep` results have keyword in headings → adopt as candidate
-   - Verification method: extract headings with `mq '.h2'` from Grep result files and check if keyword appears in **H1~H3 headings**
+   - Verification method: one query over the index checks every file's **H1~H3 headings** at once (≈25 ms for a whole vault) — `sqlite3 vault.fts5.db "SELECT DISTINCT rel_path, heading FROM notes_fts WHERE instr(heading,'<keyword>') > 0;"`. Without a DB, run `mq '.h2'` on each Grep result file instead
 
 5. **Directory structure as coverage signal**
    - Check if `Glob` results reveal a **dedicated subdirectory** (e.g., `topic-area/person-name/` = 6+ file archive on that subject)
@@ -164,14 +173,17 @@ Long-form `.md` files in this repo routinely exceed 2,000 lines. Reading top-to-
 **Shortcut:** if Stage 1's FTS5 query already returned the target section's `heading + start_line-end_line`, Stage 2 is satisfied for that hit — proceed directly to Stage 3/4 within that line range. Run the full heading map only when you need the file's overall structure (interpretive questions, multi-section synthesis) or when working from the Grep fallback.
 
 1. Extract the table of contents:
-   - **Preferred — `mq` (AST-level, zero false positives):**
-     `mq '.h2' <candidate>.md` — extracts real H2 headings, ignoring `##` inside code blocks
+   - **Preferred — the index (when `vault.fts5.db` exists):** one row per H1–H3 section, already split with code fences respected, and it carries the line range that mq does not:
+     ```bash
+     sqlite3 -separator $'\t' vault.fts5.db "SELECT start_line || '-' || end_line, heading FROM notes_fts WHERE rel_path = '<candidate>.md' ORDER BY start_line;"
+     ```
+   - **No DB — `mq` (AST-level, zero false positives):** `mq '.h2' <candidate>.md` extracts real H2 headings, ignoring `##` inside code blocks
    - Internal fallback: `Grep` with `pattern="^#{1,3}\s"`, `path=<candidate>`, `output_mode="content"`, `-n=true`
    - Shell fallback: `rg -n '^#{1,3}\s' <candidate>.md`
 
 2. Identify the 1–3 sections most likely to answer the question. Record their line ranges.
 
-**Why mq over rg (empirical):** `rg '^## '` matches `## comment` inside code blocks (false positive). Empirical test: in a tech doc with code blocks, rg returned 10 headings vs mq returned 6 — **4 false positives (40% error rate)** from `## Project`, `## Commands` etc. inside a markdown code block. In pure prose files (fashion, health, places), mq = rg (identical results). **Since you cannot know whether code blocks exist before opening the file, use mq as default.**
+**Why not a plain regex (empirical):** `rg '^## '` matches `## comment` inside code blocks. On a playbook with 22 code fences, `rg '^#{1,3} '` returned **30** headings, while `mq` and the index both returned the true **15** — half the regex hits were false. In pure prose files the three agree, but you cannot know whether code blocks exist before opening the file, so never default to the regex. Between the two correct ones, the index wins: no file read, line ranges included, and the same query shape covers every file at once.
 
 ### Stage 3 — Pinpoint (Context Extraction)
 
@@ -291,7 +303,8 @@ If you catch yourself thinking:
 - "This case is different — it's general knowledge."
 - "I'll do the local search after I draft the answer."
 - "I'll just Read the whole file — it's only 2,000 lines."
-- "mq is overkill for heading extraction — rg '^##' is fine."
+- "rg '^##' is fine for heading extraction." — it counts `##` inside code blocks; use the index, or `mq` without one.
+- "The 2-character keyword returned nothing — the vault doesn't cover it." — trigram never indexes it; rerun with `instr()`.
 - "I searched in one language and found nothing — topic is absent."
 - "The keyword returned 2 sections, so that's all the archive has." — trigram matches substrings, not meaning. Expand along language / register / specificity / abbreviation first.
 
@@ -314,14 +327,15 @@ If you catch yourself thinking:
 | "The hub is the mandated first read, so I read all of it." | Mandated is the *check*, not the byte count. A hub that reproduces every ruling is a defect to report, not a toll to pay — read the router tier and query for the rest. |
 | "The verdict card is short, so it can't be the whole answer." | Brevity is the format, not a gap. The card carries the ruling, the rejects, and the appeal conditions; the deliberation lives in the source it was distilled from. Length is not evidence of completeness. |
 | "The card's ruling and a fresh web result disagree — the web is newer, so it wins." | Only if the card is expired or one of its stated appeal conditions has fired. Otherwise you are re-litigating a settled decision on one search result. Report the conflict as an appeal trigger; do not silently overwrite the ruling. |
-| "The file is 2,000 lines — too big to use." | That is exactly why Stage 2 exists. `mq '.h2'` takes milliseconds and turns 2,000 lines into a 10-line map. |
+| "The file is 2,000 lines — too big to use." | That is exactly why Stage 2 exists. One index query (or `mq '.h2'` without a DB) takes milliseconds and turns 2,000 lines into a 10-line map with line ranges. |
 | "Web search will be more current." | Currency is Stage 5, not Stage 1. The user's curated take is the baseline; web only fills gaps. |
 | "I remember what's in that file from a prior session." | Memories decay; files change. Re-`Grep`. Citations without re-verification are hallucinations with line numbers. |
 | "Citing `file:line` is overkill for a chat answer." | This repo's value is provenance. Without `file:line`, the user cannot audit you and the answer is unfalsifiable. |
-| "ast-grep would be more powerful." | `sg` is for code AST, not Markdown prose. For Markdown AST, use `mq`. |
+| "ast-grep would be more powerful." | `sg` is for code AST, not Markdown prose. Markdown structure comes from the index, or `mq` without one. |
 | "I'll just `cat` the whole file into context." | Burns context budget. A 150K file = 42K tokens = 4.2% of context gone. Use `Read offset/limit` after mapping. |
 | "I ran one `Grep` and it returned nothing — moving to web." | One query is not Stage 1. Try synonyms, brand variants (EN/KR/JP), and `Glob` on filenames before declaring absence. |
-| "rg '^##' is good enough for heading extraction." | Empirical: rg=10 vs mq=6 in a code-block-heavy doc (4 false positives, 40% error rate). `mq` is correct. |
+| "rg '^##' is good enough for heading extraction." | Empirical: 30 vs 15 on a playbook with 22 code fences — half the regex hits were inside code blocks. The index and `mq` both return the true 15; the index also gives line ranges. |
+| "The keyword is only two characters, but `MATCH` handles it." | It does not. trigram never indexes a token under three characters, and `MATCH` returns 0 rows without an error. Measured: `MATCH '볼트'` → 0, `instr(body,'볼트')` → 1,434 sections. Every short term goes to the `instr()` scan in Stage 1. |
 | "Grep returned 0 results, so the topic doesn't exist." | You may have searched in only one language. Try EN/KR/generic-name/abbreviation variants. Empirical: single-language search = 4 files → triple-language search = 8 files. |
 | "15 candidates — I'll read them all directly." | 5+ → delegate to `Agent(Explore)`. 15 files processed directly = context budget blown. |
 | "Grep returned 8 files, so all are topic files." | Glob=0 + Grep returning only passing mentions = **topic absent**. Adopt only files where keyword appears in headings. |
@@ -349,8 +363,8 @@ If you catch yourself thinking:
 |-------|----------|-------------|----------------|-------------------|
 | **0. Awareness** | Choose tool layer | — | — | Internal tools chosen unless pipeline needed |
 | **1.0 Verdict** | Check the settled-conclusion layer before searching | `./verdict-lookup.sh <keyword>`, or FTS5 `MATCH` + one `instr(rel_path,'<root>/')=1` per `verdicts` folder, OR'd (**never `LIKE`**); `Read` hub only if ≲15 KB | — | Live card → answer from it, skip Stages 2–5; expired card → check only its appeal conditions; no card → continue |
-| **1. Discovery** | Narrow + rank candidate SECTIONS (multi-lang, synonym-expanded) | `Glob`, **`sqlite3 vault.fts5.db ... ORDER BY bm25`** (section rows: `rel_path + heading + line range`; superseded + deprecated excluded), `Grep` fallback | `fd -e md`, `rg -l -t md` | Sections produced + BM25-ranked; query expanded on all four axes (language / register / specificity / abbreviation) before declaring thin results; `_inbox`/`_archive`/`_answers` excluded by default (explicit opt-in only; `_answers` → `[A-crystal]` event record); ≥5 → Explore delegation |
-| **2. Map** | Heading scan of long files (skippable per-hit when Stage 1 returned the section) | `Grep ^#{1,3}\s` | **`mq '.h2'`** (preferred), `rg -n '^#{1,3}\s'` | Section line ranges identified |
+| **1. Discovery** | Narrow + rank candidate SECTIONS (multi-lang, synonym-expanded) | `Glob`, **`sqlite3 vault.fts5.db ... ORDER BY bm25`** for terms ≥3 chars + **`instr(body,…)` scan for shorter terms** (section rows: `rel_path + heading + line range`; superseded + deprecated excluded), `Grep` fallback | `fd -e md`, `rg -l -t md` | Sections produced + ranked; query expanded on all four axes (language / register / specificity / abbreviation) and no short term left in `MATCH` before declaring thin results; `_inbox`/`_archive`/`_answers` excluded by default (explicit opt-in only; `_answers` → `[A-crystal]` event record); ≥5 → Explore delegation |
+| **2. Map** | Heading scan of long files (skippable per-hit when Stage 1 returned the section) | **index query** `SELECT start_line, heading … WHERE rel_path=?` | `mq '.h2'` (no DB), `rg -n '^#{1,3}\s'` | Section line ranges identified |
 | **3. Pinpoint** | Extract cited context | `Grep -n -C 5` | `rg -n -C 5` | `file:line` citations captured |
 | **4. Verify** | Targeted read | `Read offset/limit`, `Agent(Explore)` | `glow` (render check) | Passage read in surrounding context |
 | **5. Augment** | Fill gaps from web/social | `mcp__brave-search__*`, `mcp__reddit__*` | — | Gap-only URLs added; local citations preserved |
@@ -359,7 +373,7 @@ If you catch yourself thinking:
 
 ## Golden One-Liner
 
-> **`verdicts.md` (settled? stop) → `Glob` → `FTS5 BM25` (section hits: `file + heading + lines`; or `Grep` fallback) → `mq` (headings, when Stage 1 didn't already map the hit) → `Grep -n -C` (context) → `Read` + frontmatter/supersession gate → `glow` (verify) → web only for gaps.**
+> **`verdicts.md` (settled? stop) → `Glob` → `FTS5 BM25` + `instr()` for short terms (section hits: `file + heading + lines`; or `Grep` fallback) → index heading map (or `mq` without a DB, when Stage 1 didn't already map the hit) → `Grep -n -C` (context) → `Read` + frontmatter/supersession gate → `glow` (verify) → web only for gaps.**
 > Settled? → Narrow → Rank → Map → Pinpoint → Verify (provenance!) → Augment. Never reverse the order.
 
 ---
@@ -371,7 +385,7 @@ If you catch yourself thinking:
 - **Prove absence before assuming it.** "I didn't find it" requires a Stage 1 search with multi-language variants, not a hunch.
 - **Map before reading.** Long files demand a heading scan; cold reads burn context budget.
 - **Cite by `file:line`.** Provenance is non-negotiable. No line number = no claim.
-- **Right tool, right layer.** Internal tools by default; `mq` for markdown AST; shell pipelines only when justified.
+- **Right tool, right layer.** Internal tools by default; the index for structure (headings, line ranges), `mq` only without one; shell pipelines only when justified.
 - **Delegate breadth, not depth.** Multi-file sweeps belong to `Agent(Explore)`; the main agent reads what matters.
 - **Context is finite.** Every Read costs tokens. The 5 Stages are a token budget optimizer, not bureaucracy.
 - **Detail over summary.** When both exist, detailed entries are canonical. Summaries merge entities.

@@ -61,7 +61,7 @@ The vault root is `$ARGUMENTS` if a path was given, otherwise the current workin
    |------|---------------|
    | `fd` | Stage 1 filename match |
    | `rg` (ripgrep) | Stage 1 content scan; Stage 3 context extraction |
-   | `mq` | Stage 2 Markdown AST heading extraction (zero false positives inside code blocks) |
+   | `mq` | Markdown AST heading extraction when `vault.fts5.db` is missing or stale — with the index, Stage 2 reads headings and line ranges from it directly |
    | `yq` | Stage 1 YAML frontmatter filtering |
    | `glow` | Stage 4 render verification |
    | `lychee` | Archive-wide link validation |
@@ -222,7 +222,7 @@ Summarize in this order:
 | "0 rows on the smoke query, but the build printed success." | The build printing success only proves the script ran. Zero hits on a non-empty corpus means /ground Stage 1 will silently fall back to grep forever. Diagnose now. |
 | "brew install everything up front to be safe." | Installing over a working runtime wastes minutes and can shadow the user's Python. Check first; install only what the smoke test proves missing. |
 | "The 2-char CJK query returned nothing — setup is broken." | Trigram needs ≥3 characters by design. Test with a 3+ character term; /ground's grep fallback covers shorter ones. |
-| "The pipeline CLIs are optional — skip the install step." | Optional means non-blocking, not skippable. Without `mq` heading extraction gains false positives; without `sqlite3` there is no BM25 CLI. Check all, install the missing, and only report leftovers when installation is impossible. |
+| "The pipeline CLIs are optional — skip the install step." | Optional means non-blocking, not skippable. Without `sqlite3` there is no BM25 CLI and no index-based heading map, and without `mq` a stale or missing index leaves only regex heading extraction, which counts `##` inside code blocks. Check all, install the missing, and only report leftovers when installation is impossible. |
 
 ---
 
