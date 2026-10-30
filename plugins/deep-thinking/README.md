@@ -156,8 +156,7 @@ claude mcp add fetch -s user -- uvx mcp-server-fetch
 The 5-stage pipeline relies on modern shell CLIs, plus SQLite (FTS5-enabled) and Python 3 for the BM25 index that ranks Stage 1 candidates. One-shot Homebrew install:
 
 ```bash
-brew install fd ripgrep bat sd fzf scc tokei yq glow lychee sqlite python && \
-brew install harehare/tap/mq
+brew install fd ripgrep bat sd fzf scc tokei yq glow lychee sqlite python mq
 ```
 
 | Tool | Role |

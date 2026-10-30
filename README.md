@@ -357,8 +357,7 @@ The 5-stage pipeline leans on modern shell CLIs for Stages 1–4 and reuses the 
 **CLI tools — one-shot Homebrew install:**
 
 ```bash
-brew install fd ripgrep bat sd fzf scc tokei yq glow lychee && \
-brew install harehare/tap/mq
+brew install fd ripgrep bat sd fzf scc tokei yq glow lychee mq
 ```
 
 | Tool | Role in the 5-stage pipeline |
