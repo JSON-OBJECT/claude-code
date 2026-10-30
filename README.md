@@ -209,23 +209,6 @@ Conducts 15-20+ searches with mandatory Phase Zero "Unknown Unknowns" discovery.
 
 ---
 
-#### `/deep-thinking:forge-prompt {instruction}` — Instruction Smithy
-> **Build prompts that resist rationalization.**
-
-Creates bulletproof instructions following the Superpowers philosophy with 9 mandatory components.
-
-| Component | Purpose |
-|-----------|---------|
-| **Iron Law** | ONE non-negotiable rule that guarantees failure if broken |
-| **Red Flags Section** | Mental patterns that signal you're about to fail — "If you catch yourself thinking..." |
-| **Rationalization Table** | Preempts every excuse with direct rebuttal — Excuse \| Reality format |
-| **Phase Gates** | Clear checkpoints that MUST be passed before proceeding |
-| **Strong Language Protocol** | MUST/NEVER/ALWAYS — no soft language ("should", "consider", "try to") |
-
-**Philosophy:** If you think you don't need the structure, you need it most.
-
----
-
 #### `/deep-thinking:meeting-notes {transcript}` — Narrative Documentation
 > **Meeting notes that tell a story, not list fragments.**
 
@@ -359,7 +342,6 @@ Transforms any natural-language seed (any language, any length) into an `sd-dyna
 |-------|----------|----------|
 | `/deep-thinking:pulse` | Time, Brave Search, Reddit | - |
 | `/deep-thinking:deep-research` | Time, Brave Search, Reddit | - |
-| `/deep-thinking:forge-prompt` | None | - |
 | `/deep-thinking:meeting-notes` | Time, Brave Search | Context7, Fetch |
 | `/deep-thinking:translate-kr` | Brave Search | - |
 | `/deep-thinking:blog-cover` | None | - |
