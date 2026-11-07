@@ -62,6 +62,7 @@ Standalone research, writing, and creative utilities — no vault required.
 | `/deep-thinking:blog {topic or draft}` | 16-year veteran IT tech blogger framework — fact-based, source-cited content with mandatory bullet point formatting and inline hyperlinks |
 | `/deep-thinking:writing-z-image-turbo-prompts {seed}` | Forge a Z-Image-Turbo (ZIT) photorealism prompt from any natural-language seed — outputs an sd-dynamic-prompts mustache template implementing the 90hex 11-slot doctrine (camera body + film stock + anti-AI 4-stack) |
 | `/deep-thinking:hidden-reality {idea or topic}` | Anti-optimization idea forge — suggests, verifies, or defends "Hidden Reality" software ideas against an 11-mechanism doctrine (imperfection, friction, anti-utility, defamiliarization, scale violation, etc.) with academic backbone (Tega Brain, 한병철, Shklovsky, Dunne & Raby) and a 2-week prototype scope |
+| `/deep-thinking:five-lens {subject}` | Explain an object, brand, person, concept, or event through five lenses — TL;DR, one-liner, encyclopedia, sharp insights, narrative and metaphor. Every cell draws from one source-paired fact ledger, and a final trace deletes any era, figure, or "first/only/never" claim the ledger cannot back. Also fires on its own when you ask for "five lenses" |
 
 ### Mood & Feel Skills
 
