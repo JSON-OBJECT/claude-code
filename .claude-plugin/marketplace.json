@@ -1,7 +1,7 @@
 {
   "$schema": "https://anthropic.com/claude-code/marketplace.schema.json",
   "name": "jsonobject-marketplace",
-  "version": "1.27.2",
+  "version": "1.29.0",
   "description": "Personal Claude Code plugin marketplace by JSON-OBJECT",
   "owner": {
     "name": "Taehyeong Lee",
@@ -13,9 +13,9 @@
   "plugins": [
     {
       "name": "deep-thinking",
-      "description": "Advanced skills for deep research, prompt engineering, trend analysis, meeting documentation, local markdown grounding, one-command LLM Wiki vault initialization, vault health linting, answer saving, schedule indexing, journaling, Hidden Reality anti-optimization idea forging, Game Juice game-feel UI, Cozy Refuge mood reproduction, five-lens source-traced explanation, and elegiac film-score music prompt forging",
+      "description": "Advanced skills for deep research, prompt engineering, trend analysis, meeting documentation, local markdown grounding, one-command LLM Wiki vault initialization, vault health linting, answer saving, schedule indexing, journaling, Hidden Reality anti-optimization idea forging, Game Juice game-feel UI, Cozy Refuge mood reproduction, five-lens source-traced explanation, long-form source library (canonical-text ingest and verbatim-quote query), and elegiac film-score music prompt forging",
       "source": "./plugins/deep-thinking",
-      "version": "1.27.2",
+      "version": "1.29.0",
       "category": "productivity",
       "keywords": [
         "research",
@@ -58,6 +58,8 @@
         "elegiac",
         "film-score",
         "five-lens",
+        "library-ingest",
+        "library-query",
         "explanation"
       ],
       "author": {
