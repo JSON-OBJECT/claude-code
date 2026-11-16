@@ -24,7 +24,8 @@ else --library <root>.
   interpretation.py setup  <home> --owner NAME [--room NAME] [--autosave] [--vendor]   a reading room for one owner, under its own name
   interpretation.py auto   SessionStart|UserPromptSubmit|Stop < hook-input   the plugin's hooks: act only in a reading room
   interpretation.py open   <home>                                            SessionStart: desk, names, where the last session stopped
-  interpretation.py brief  <home> < stop-hook-input.json                     Stop: send a too-long answer back once (max_quotes)
+  interpretation.py title  <home> "<the reader's words>"                     the point of this turn, verbatim: land titles the reading with it
+  interpretation.py brief  <home> < stop-hook-input.json                     Stop: send an answer back once (too long, too many quotes, or a quote its anchor does not hold)
   interpretation.py pages  <home>                                            digest pages due: names, works, their readings
   interpretation.py material <home> --reach NAME | --work ID | --all         what a digest page is written from
   interpretation.py digest-check <home>                                       exit 1 on any failure
@@ -84,7 +85,13 @@ DEFAULT_LOCALE = {
     "title_drop_leading": ["uh", "um", "so", "well", "okay"],
     "follows": "Follows", "thoughts_file": "thoughts", "min_chars": 20, "title_chars": 40,
     "settled_signals": [], "tentative_signals": [], "tail_drop": [],
+    "request_tail": ["explain", "tell me", "show me", "break it down", "read"], "request_helpers": ["please"],
+    "reaction_phrases": ["interesting", "insightful", "that's hard", "makes sense now"],
+    "adopt_phrases": ["that's right", "exactly", "you're right", "that's it", "good point"], "adopt_max_words": 2,
     "memory_phrases": ["what did i say", "where were we", "did i say"],
+    "quote_reason": "A quote in this answer is not word for word in the lines its anchor names ({errors}). Fix the anchor line numbers or the quoted words — copy the line as it stands, footnote marks included — and give the same answer again.",
+    "max_chars": 0, "long_ok": ["all of it", "everything", "more", "in full"],
+    "long_reason": "This answer runs {n} characters; the reader reads one phone screen (about {max}). Give the same answer again within that: the answer first, one quote, cut the rest.",
     "max_quotes": 0, "brief_reason": "This answer quotes {n} passages; the reader reads on a phone. Rewrite it with at most {max} quote blocks, first sentence the answer.",
     "open_desk": "Desk — the reader's standing rules (follow them from the first answer) and open tasks",
     "open_lexicon": "The reader's names — speak to them in these names and words",
@@ -292,9 +299,11 @@ def now_stamp(rest=()):
 def log_said(home, text, rest=()):
     stamp = now_stamp(rest); day, hm = stamp.split(" ")
     text = re.sub(r"\s*\n\s*", " ", unicodedata.normalize("NFC", text)).replace("**", "").strip()
+    text = re.sub(r"^/[\w:.\-]+\s*", "", text)          # "/five-lens why…": the command is for the tool; the words after it are the reader's
     if not text: return stamp
     d = home / "interpretation" / "log"; d.mkdir(parents=True, exist_ok=True)
     with open(d / f"{day}.md", "a", encoding="utf-8") as f: f.write(f"- ({hm}) 「{text}」\n")
+    (d / ".title_hint").unlink(missing_ok=True)          # a new turn: last turn's pick of the point is stale
     return stamp
 
 
@@ -741,21 +750,63 @@ def open_session(home):
     sys.exit(0)
 
 
-def brief(raw):
-    """Stop: send an answer back once when it quotes more passages than the reader can read on a phone (max_quotes)."""
+def bounce(home, inp):
+    """Why this answer goes back once, or None: more quote blocks than a phone screen holds (max_quotes), or a quote
+    that is not word for word in the lines its anchor names — a wrong anchor would land the wrong passage."""
+    if inp.get("stop_hook_active"): return None
+    ans = inp.get("last_assistant_message") or ""
+    cap = int(L["max_quotes"])
+    n = sum(1 for l in ans.splitlines() if l.lstrip().startswith("> — ") or l.lstrip().startswith(">— "))
+    if cap and n > cap: return L["brief_reason"].format(n=n, max=cap)
+    mc = int(L["max_chars"]); size = len(re.sub(r"\s", "", ans))
+    if mc and size > mc:                                               # one phone screen, unless they asked for all of it
+        logd = home / "interpretation" / "log"; mark = logd / ".landed"
+        last = mark.read_text().strip() if mark.exists() else ""
+        now = squeeze(" ".join(t for st, t in log_lines(home) if st > last))
+        if not any(squeeze(w) in now for w in L["long_ok"]): return L["long_reason"].format(n=size, max=mc)
+    if not ANCHOR.search(ans): return None
+    here = pathlib.Path(__file__).resolve().parent
+    checker = next((c for c in (here / "library-quote-check.py", lib_root(home) / "scripts" / "library-quote-check.py",
+                                here.parent.parent / "library-ingest" / "scripts" / "library-quote-check.py") if c.exists()), None)
+    if checker is None: return None
+    r = subprocess.run([sys.executable, "-I", str(checker), str(lib_root(home))], input=ans, capture_output=True, text=True)
+    if r.returncode == 0: return None
+    return L["quote_reason"].format(errors="; ".join(r.stdout.strip().splitlines()[:4]))
+
+
+def title_hint(home, rest):
+    """The session names the point of the reader's words it is answering — a stretch of those words, verbatim. land uses
+    it as the reading's title only when it occurs, character for character, in what the reader said this turn."""
+    t = " ".join(rest).strip()
+    if not t: sys.exit("title: give a stretch of the reader's words")
+    d = home / "interpretation" / "log"; d.mkdir(parents=True, exist_ok=True)
+    (d / ".title_hint").write_text(t, encoding="utf-8"); print("title hint kept")
+
+
+def brief(raw, home=pathlib.Path(".")):
+    """Stop: send an answer back once — too many quote blocks for a phone, or a quote its anchor does not hold."""
     import json
     try: inp = json.loads(raw or "{}")
     except Exception: sys.exit(0)
-    cap = int(L["max_quotes"])
-    if not cap or inp.get("stop_hook_active"): sys.exit(0)
-    n = sum(1 for l in (inp.get("last_assistant_message") or "").splitlines() if l.lstrip().startswith("> — ") or l.lstrip().startswith(">— "))
-    if n > cap: print(json.dumps({"decision": "block", "reason": L["brief_reason"].format(n=n, max=cap)}, ensure_ascii=False))
+    why = bounce(home, inp)
+    if why: print(json.dumps({"decision": "block", "reason": why}, ensure_ascii=False))
     sys.exit(0)
+
+
+def strip_plea(x, tails):
+    """'the second chapter in plain words, explain it' → 'the second chapter in plain words': only the word that carries
+    the request goes, with a trailing helper word (request_helpers: "please", or a language's "give me" ending)."""
+    helpers = "|".join(re.escape(h) for h in L["request_helpers"]) or "(?!)"
+    for w in sorted(tails, key=len, reverse=True):
+        m = re.search(r"\s*\S*" + re.escape(w) + r"\S*(?:\s+(?:" + helpers + r"))?[?？.!\s]*$", x)
+        if m: return x[:m.start()].rstrip(" ,")
+    return x
 
 
 def title_of(text):
     """A reading's title from the reader's words: a sentence said twice wins (a point lands by repetition), else the
-    last statement, else the first sentence. Unpunctuated speech that runs long gives its tail — the point comes last."""
+    last claim, else the first question, else a request without its request tail ("… explain it"). Reactions
+    ("interesting") and requests are never the point. Unpunctuated speech that runs long gives its tail."""
     n = int(L["title_chars"]); t = text.strip("「」 ")
     drop = [re.escape(w) for w in L["title_drop_leading"]]; tail = [re.escape(w) for w in L["tail_drop"]]
     def clean(x):
@@ -768,12 +819,53 @@ def title_of(text):
         seen = {}
         for x in sents: seen[squeeze(x)] = seen.get(squeeze(x), 0) + 1
         rep2 = [x for x in sents if seen[squeeze(x)] > 1]
-        stm = [x for x in sents if not x.rstrip().endswith(("?", "？"))]
-        pick = rep2[0] if rep2 else stm[-1] if stm else sents[0]
+        req = [squeeze(w) for w in L["request_tail"]]; rea = [squeeze(w) for w in L["reaction_phrases"]]
+        ask = lambda x: x.rstrip().endswith(("?", "？"))
+        hel = [squeeze(h) for h in L["request_helpers"]] + [""]
+        plea = lambda x: any(squeeze(x).rstrip("?？.!").endswith(w + h) for w in req for h in hel)
+        def feel(x):                                                                # "interesting.": a reaction, nothing more
+            r = squeeze(x).rstrip("?？.!")
+            for w in sorted(rea, key=len, reverse=True): r = r.replace(w, "")
+            return len(r) < len(squeeze(x)) and len(r) <= 12
+        stm = [x for x in sents if not ask(x) and not plea(x) and not feel(x)]      # a claim of the reader's
+        qs = [x for x in sents if ask(x) and not feel(x)]                           # else what they asked
+        body = [strip_plea(x, L["request_tail"]) for x in sents if plea(x)]          # else what they asked for, without "explain it"
+        pick = rep2[0] if rep2 else stm[-1] if stm else qs[0] if qs else next((b for b in body if len(squeeze(b)) > 8), sents[0])
     else:
         pick = sents[0] if sents else t
+        cut = strip_plea(pick, L["request_tail"])
+        if len(squeeze(cut)) > 8: pick = cut                                      # "… explain it": the point is before the request
         if len(pick) > n * 2: return "… " + pick[-n:].split(" ", 1)[-1]          # a long unpunctuated run: its tail
     return pick if len(pick) <= n else pick[:n].rsplit(" ", 1)[0] + " …"
+
+
+def point_of(ans):
+    """An answer's point: its first sentences outside quote blocks and lists (the guide puts the answer there)."""
+    for l in ans.strip().splitlines():
+        l = re.sub(r"[*_`#]", "", l).strip()
+        if not l or l.startswith((">", "▎", "-", "—", "|")) or ANCHOR.search(l): continue
+        ss = re.split(r"(?<=[.!?。？])\s+", l)
+        out = ss[0] if len(ss[0]) >= 40 or len(ss) == 1 else " ".join(ss[:2])
+        return out[:240]
+    return ""
+
+
+def adopts(words):
+    """The reader takes up the assistant's point: one of their own words for yes, as a whole word, opens the turn
+    (within its first adopt_max_words words, fillers aside), with no not-yet word right after it. "Yes, but…" and talking on count."""
+    w = " " + re.sub(r"[.,!?？。]", " ", re.sub(r"\s+", " ", unicodedata.normalize("NFC", words))).strip().lower() + " "
+    drop = sorted((x.lower() for x in L["title_drop_leading"]), key=len, reverse=True)
+    while True:
+        k = next((d for d in drop if w.startswith(" " + d + " ")), None)
+        if not k: break
+        w = w[len(k) + 1:]
+    head = " " + " ".join(w.split()[:int(L["adopt_max_words"])]) + " "
+    for x in L["adopt_phrases"]:
+        m = re.search(r" " + re.escape(x.lower()) + r" ", head)             # a whole word: "good" is a yes, "goods" is not
+        if m:
+            near = squeeze(w[m.start(): m.end() + 10])
+            if not any(squeeze(t) in near for t in L["tentative_signals"]): return True
+    return False
 
 
 def land(home, raw):
@@ -784,8 +876,11 @@ def land(home, raw):
     import json
     try: inp = json.loads(raw or "{}")
     except Exception: inp = {}
-    if inp.get("stop_hook_active"): return
-    logd = home / "interpretation" / "log"; mark = logd / ".landed"
+    logd = home / "interpretation" / "log"; mark = logd / ".landed"; pend = logd / ".pending"
+    if inp.get("stop_hook_active") and not pend.exists(): return       # another hook sent the answer back: already landed
+    if bounce(home, inp):                                              # it goes back to be fixed: land the fixed answer instead
+        logd.mkdir(parents=True, exist_ok=True); pend.write_text("1"); return
+    pend.unlink(missing_ok=True)
     last = mark.read_text().strip() if mark.exists() else ""
     said = [(st, t) for st, t in log_lines(home) if st > last]
     if not said: return
@@ -801,10 +896,27 @@ def land(home, raw):
     said = [(st, t) for st, t in said if not any(m in squeeze(t) for m in mem)]          # "what did I say": a question to the memory, not a thought
     lib = lib_root(home); ans = inp.get("last_assistant_message") or ""
     anchors = list(dict.fromkeys(m.group(0) for m in ANCHOR.finditer(ans) if (lib / "library" / f"{m[1]}.txt").exists()))[:6]
+    sid = inp.get("session_id", ""); sf = logd / ".sessions"; lf = logd / ".lastanswer"
+    sess = json.loads(sf.read_text()) if sf.exists() else {}
+    lasts = json.loads(lf.read_text()) if lf.exists() else {}
+    before = lasts.get(sid) or {}; lasts[sid] = {"point": point_of(ans), "anchors": anchors}
+    lf.write_text(json.dumps(lasts, ensure_ascii=False))
+    if said and adopts(" ".join(t for _, t in said)) and before.get("point") and sid in sess:   # "that's it": the reader takes up my last point
+        rest = squeeze(" ".join(t for _, t in said))
+        for x in sorted(L["adopt_phrases"], key=len, reverse=True): rest = rest.replace(squeeze(x), "")
+        only = len(rest) < int(L["min_chars"])          # nothing but the yes: it joins that reading; "yes, but…" also lands as its own
+        args = ["keep", str(home), "--to", str(sess[sid])] + (sum((["--from", st] for st, _ in said), []) if only else [])
+        pa = before.get("anchors", [])[:2]
+        if len(pa) == 2:                                 # an adopted paragraph rests on two quoted lines (the check's rule)
+            tmp = logd / ".adopt.txt"; tmp.write_text(f"{before['point']} ({pa[0]}, {pa[1]})", encoding="utf-8")
+            args += ["--paragraph", str(tmp), "--paragraph-kind", "adopted"] + sum((["--anchor", a] for a in pa), [])
+        if len(pa) == 2 or only:                         # under one line or none, a bare yes still joins the reading; "yes, but…" just lands
+            r = subprocess.run([sys.executable, "-I", __file__] + args, capture_output=True, text=True)
+            (logd / ".adopt.txt").unlink(missing_ok=True)
+            print((r.stdout + r.stderr).strip().splitlines()[0] if (r.stdout + r.stderr).strip() else "", file=sys.stderr)
+        if only: return
     if not said or (not anchors and len(squeeze(" ".join(t for _, t in said))) < int(L["min_chars"])): return
     rec = json.loads((logd / ".recalled").read_text()) if (logd / ".recalled").exists() else {}
-    sid = inp.get("session_id", ""); sf = logd / ".sessions"
-    sess = json.loads(sf.read_text()) if sf.exists() else {}
     prev = [sess[sid]] if sid and sid in sess else []                     # the train of thought: the previous reading of this session
     follows = list(dict.fromkeys(prev + [n for st, _ in said for n in rec.get(st, [])]))
     q = [l.strip().lstrip("*- ").strip() for l in ans.strip().splitlines()
@@ -825,6 +937,10 @@ def land(home, raw):
                 if nm not in have: h.write(f"{nm}\t{nm}\tname\n")
     reach, _ = names_in(home, words, {r for e in ents for r in e["reach"]} | set(coined))   # longest first; a misheard spelling counts as its name
     title = title_of(max(said, key=lambda x: len(x[1]))[1])
+    hf = logd / ".title_hint"
+    if hf.exists():                                      # the session's pick of the point — kept only if it is the reader's own words
+        hint = hf.read_text(encoding="utf-8").strip().strip("「」\"' "); hf.unlink()
+        if 2 <= len(hint) <= 60 and squeeze(hint) in squeeze(words): title = hint
     flat = squeeze(words)
     status = ("tentative" if any(squeeze(x) in flat for x in L["tentative_signals"])
               else "settled" if any(squeeze(x) in flat for x in L["settled_signals"]) else "auto")   # his own words for firm and not-yet
@@ -946,7 +1062,7 @@ def main():
     a = sys.argv[1:]
     if a[:1] == ["auto"]:
         auto(a[1] if len(a) > 1 else "", sys.stdin.read())
-    if len(a) < 2 or a[0] in ("-h", "--help") or a[0] not in ("check", "list", "recall", "find", "desk", "said", "hook", "keep", "index", "show", "material", "digest-check", "pages", "land", "alias", "lexicon", "open", "brief", "init", "setup", "auto"):
+    if len(a) < 2 or a[0] in ("-h", "--help") or a[0] not in ("check", "list", "recall", "find", "desk", "said", "hook", "keep", "index", "show", "material", "digest-check", "pages", "land", "alias", "lexicon", "open", "brief", "init", "setup", "auto", "title"):
         print(__doc__); sys.exit(0 if a[:1] in (["-h"], ["--help"]) else 2)
     cmd, root, rest = a[0], pathlib.Path(a[1]), a[2:]
     setup(root)
@@ -984,8 +1100,10 @@ def main():
         open_session(root)
     if cmd in ("setup", "init"):
         init(root, rest)
+    if cmd == "title":
+        title_hint(root, rest); return
     if cmd == "brief":
-        brief(sys.stdin.read())
+        brief(sys.stdin.read(), root)
     if cmd == "land":
         land(root, sys.stdin.read()); sys.exit(0)
     if cmd == "index":

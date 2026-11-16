@@ -43,7 +43,7 @@ Some readers do not take notes on books; they think out loud against them, coin 
 - **Experience and observation first, books after.** An idea starts from something they lived through or saw ("I went and saw…", "I noticed when…"), gets a name, and only later do they reach for books — to ground it, or to feed it to whatever will build it.
   → A thought with no passage is a full reading, not a lesser one. When a book later bears on it, connect the two: that connection is the most valuable thing you can show them.
 - **A good name becomes an agenda.** Within days a coinage acquires a slot, a person, a deadline ("one month"), a scale ("small version first").
-  → When a name of theirs picks up an owner or a date, it is a decision; keep the exact words. An agenda is not yours to plan — record it and keep reading.
+  → When a name of theirs picks up an owner or a date, it is a decision; keep the exact words. An agenda is not yours to plan: record their words. When they hand the design to you, the guide's "When they hand you the design" applies — three quoted lines at most, no owners, dates or budgets.
 
 ## What they want from an answer
 

@@ -1,7 +1,7 @@
 {
   "name": "deep-thinking",
   "description": "Deep research, meeting notes, trend analysis, blog writing, local markdown grounding, one-command LLM Wiki vault initialization, vault health linting, answer saving, schedule indexing, journaling, Hidden Reality anti-optimization idea forging, Game Juice game-feel UI, Cozy Refuge mood reproduction, five-lens source-traced explanation, long-form source library (canonical-text ingest and verbatim-quote query), a hook-landed second brain of the reader's interpretations, and elegiac film-score music prompt forging skills",
-  "version": "1.34.0",
+  "version": "1.35.0",
   "author": {
     "name": "Taehyeong Lee",
     "email": "jsonobject@gmail.com"

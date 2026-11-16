@@ -10,7 +10,7 @@ What the answer must contain, and what is checked:
       > — 무정 > 13 · library/무정.txt:403
     Every line above the anchor line must occur word for word inside the anchored lines, and the anchor must
     be tight: it starts and ends on a line the quote touches. Put one "> " line per source line quoted.
-    Whitespace is ignored; nothing else is. " … " inside a quote line marks an omission: each piece is
+    Whitespace and curly-vs-straight quote marks are ignored; nothing else is. " … " inside a quote line, or "… " / " …" at its start or end, marks an omission: each piece is
     checked, in order. The anchor is library/<file>.txt:<line> or :<start>-<end>.
 
   ABSENCE BLOCK — one line stating that spellings were searched and not found:
@@ -30,8 +30,12 @@ import pathlib, re, sqlite3, sys, unicodedata
 A = re.compile(r"(library/[^\s:|)\]]+\.txt):(\d+)(?:-(\d+))?")
 
 
+QM = str.maketrans({"“": '"', "”": '"', "„": '"', "‘": "'", "’": "'", "«": '"', "»": '"'})
+
+
 def N(s):
     s = re.sub(r"\\([#>+*.)\-])", r"\1", unicodedata.normalize("NFC", s))     # Markdown escapes are not text
+    s = s.translate(QM)                                                       # “ ” ‘ ’ « » are typography, not wording
     return re.sub(r"\s+", "", s)
 
 
@@ -110,7 +114,7 @@ def main():
         n_q += 1
         def inside(span_lines):
             hay, pos = "".join(span_lines), 0
-            for piece in re.split(r"\s…\s|\(중략\)|\[…\]", "\n".join(block[:-1])):
+            for piece in re.split(r"(?:^|\s)…(?:\s|$)|\(중략\)|\[…\]", "\n".join(block[:-1]), flags=re.M):   # "… x", "x …", "x … y": cut ends count too
                 for qline in piece.split("\n"):
                     q = N(qline)
                     if not q: continue
