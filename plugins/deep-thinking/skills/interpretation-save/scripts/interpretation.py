@@ -25,7 +25,7 @@ else --library <root>.
   interpretation.py auto   SessionStart|UserPromptSubmit|Stop < hook-input   the plugin's hooks: act only in a reading room
   interpretation.py open   <home>                                            SessionStart: desk, names, where the last session stopped
   interpretation.py title  <home> "<the reader's words>"                     the point of this turn, verbatim: land titles the reading with it
-  interpretation.py brief  <home> < stop-hook-input.json                     Stop: send an answer back once (too long, too many quotes, or a quote its anchor does not hold)
+  interpretation.py brief  <home> < stop-hook-input.json                     Stop: send an answer back once (too long, too many quotes, a comparison opened as fact, or a quote its anchor does not hold)
   interpretation.py pages  <home>                                            digest pages due: names, works, their readings
   interpretation.py material <home> --reach NAME | --work ID | --all         what a digest page is written from
   interpretation.py digest-check <home>                                       exit 1 on any failure
@@ -90,6 +90,9 @@ DEFAULT_LOCALE = {
     "adopt_phrases": ["that's right", "exactly", "you're right", "that's it", "good point"], "adopt_max_words": 2,
     "memory_phrases": ["what did i say", "where were we", "did i say"],
     "quote_reason": "A quote in this answer is not word for word in the lines its anchor names ({errors}). Fix the anchor line numbers or the quoted words — copy the line as it stands, footnote marks included — and give the same answer again.",
+    "compare_words": ["same as", "the same", "different", "opposite", "the reverse", "unlike"],
+    "own_marks": ["my reading", "as i read it", "i'd say"], "attribution_marks": ["says", "said", "writes", "wrote", "\"", "“"],
+    "synthesis_reason": "The answer opens with a comparison as if a book said it: 「{first}」. If a quoted line says it, attribute it there (who says it); if not, open with your own-reading mark and keep the comparison as yours.",
     "max_chars": 0, "long_ok": ["all of it", "everything", "more", "in full"],
     "long_reason": "This answer runs {n} characters; the reader reads one phone screen (about {max}). Give the same answer again within that: the answer first, one quote, cut the rest.",
     "max_quotes": 0, "brief_reason": "This answer quotes {n} passages; the reader reads on a phone. Rewrite it with at most {max} quote blocks, first sentence the answer.",
@@ -769,6 +772,10 @@ def bounce(home, inp):
         last = mark.read_text().strip() if mark.exists() else ""
         now = squeeze(" ".join(t for st, t in log_lines(home) if st > last))
         if not any(squeeze(w) in now for w in L["long_ok"]): return L["long_reason"].format(n=size, max=mc)
+    first = re.split(r"(?<=[.!?。？])\s+", point_of(ans) or "")[0].lower()
+    if first and any(w.lower() in first for w in L["compare_words"]) \
+            and not any(w.lower() in first for w in L["own_marks"] + L["attribution_marks"]):
+        return L["synthesis_reason"].format(first=first[:80])           # a comparison opened as fact that no line says
     if not ANCHOR.search(ans): return None
     here = pathlib.Path(__file__).resolve().parent
     checker = next((c for c in (here / "library-quote-check.py", lib_root(home) / "scripts" / "library-quote-check.py",
