@@ -11,7 +11,7 @@ else --library <root>.
   interpretation.py keep   <home> --title T --from STAMP [--from STAMP …] --anchor library/<f>.txt:<n>[-<m>] …
                            [--file <topic>] [--to <no>] [--status tentative|settled] [--reach NAME …]
                            [--omit TEXT …] [--reject TEXT --why TEXT …] [--drop-anchor A …] [--against ANCHOR …]
-                           [--paragraph FILE --paragraph-kind adopted|kept] [--follows <no> …] [--asked TEXT]
+                           [--paragraph FILE --paragraph-kind adopted|kept] [--follows <no> …] [--asked TEXT] [--took TEXT]
   interpretation.py find   <home> [--limit N] [--tentative] [--rejected] [--reach NAME] ["<a|b>" …]
   interpretation.py list   <home> [--work <id>] [--tentative]
   interpretation.py show   <home> <no> [<no> …]                              entries without their quotes
@@ -100,7 +100,7 @@ DEFAULT_LOCALE = {
     "naming_drop": ["the", "a", "an", "my", "our", "this", "that"],
     "stopwords": ["the", "a", "an", "and", "or", "but", "of", "to", "in", "on", "at", "is", "are", "was", "it", "this", "that",
                   "he", "she", "they", "we", "you", "i", "me", "my", "his", "her", "as", "if", "not", "be", "so", "for", "with"],
-    "asked": "Asked", "chat_phrases": ["got to go", "see you", "talk later", "goodnight", "i'm tired"], "chat_max_chars": 60,
+    "asked": "Asked", "took": "Took up (assistant's)", "chat_phrases": ["got to go", "see you", "talk later", "goodnight", "i'm tired"], "chat_max_chars": 60,
 }
 L = dict(DEFAULT_LOCALE)
 
@@ -108,7 +108,7 @@ L = dict(DEFAULT_LOCALE)
 def setup(home):
     """Load interpretation/locale.json over the English defaults and build the line patterns."""
     import json
-    global L, READER, READER_ANY, REJECT, REJECT_ANY, REACH, ADOPT, ADOPT_OK, STATUS, STATUS_ANY, AGAINST, FOLLOWS, ASKED, TENT, SETT, AUTO
+    global L, READER, READER_ANY, REJECT, REJECT_ANY, REACH, ADOPT, ADOPT_OK, STATUS, STATUS_ANY, AGAINST, FOLLOWS, ASKED, TOOK, TENT, SETT, AUTO
     f = home / "interpretation" / "locale.json"
     L = dict(DEFAULT_LOCALE, **(json.loads(f.read_text(encoding="utf-8")) if f.exists() else {}))
     alt = lambda k: "(?:" + "|".join(re.escape(x) for x in dict.fromkeys([DEFAULT_LOCALE[k], L[k]])) + ")"
@@ -120,6 +120,7 @@ def setup(home):
     AGAINST = re.compile(r"^- \*\*" + alt("against") + r"\*\*:\s*(.*)$")
     FOLLOWS = re.compile(r"^- \*\*" + alt("follows") + r"\*\*:\s*(.*)$")
     ASKED = re.compile(r"^- \*\*" + alt("asked") + " " + D + r"\*\*:\s*(\S.*)$")
+    TOOK = re.compile(r"^- \*\*" + alt("took") + " " + D + r"\*\*:\s*(\S.*)$")
     ADOPT = re.compile(r"^\[" + alt("interpretation") + r"\]")
     ADOPT_OK = re.compile(r"^\[" + alt("interpretation") + r"\] \([^)]*\d{4}-\d{2}-\d{2}[^)]*\)")
     STATUS = re.compile(r"^- \*\*" + alt("status") + " " + D + r"\*\*:\s*(\S+)\s*$")
@@ -158,7 +159,7 @@ def load(root, only=None):
             if line.startswith("## "):
                 h = line[3:].strip(); m = NO.match(h)
                 cur = {"file": rel, "line": i, "head": m[2] if m else h, "no": int(m[1]) if m else None, "body": [], "reader": [],
-                       "reach": [], "reject": [], "adopt": [], "undated": [], "status": [], "follows": [], "asked": []}
+                       "reach": [], "reject": [], "adopt": [], "undated": [], "status": [], "follows": [], "asked": [], "took": []}
                 ents.append(cur)
             elif cur is not None:
                 cur["body"].append(line)
@@ -174,6 +175,8 @@ def load(root, only=None):
                 if m: cur["follows"] += [int(x) for x in re.findall(r"\d+", m[1])]
                 m = ASKED.match(line)
                 if m: cur["asked"].append((m[1], m[2]))
+                m = TOOK.match(line)
+                if m: cur["took"].append((m[1], m[2]))
                 if ADOPT.match(line): cur["adopt"].append(line)
                 m = STATUS.match(line)
                 if m: cur["status"].append((m[1], m[2]))
@@ -333,7 +336,7 @@ def build_index(home):
         for d, t in e["reader"]: kept.add((d, squeeze(t)[:40]))
         c.execute("insert into rows values('entry',?,?,?,?,?,?)", (str(e["no"]), e["first"], e["head"], ", ".join(e["reach"]),
                   " ".join(t for _, t in e["reader"]), " ".join(t for _, t in e["reject"]) + " " + " ".join(e["adopt"]) + " "
-                  + " ".join(l[4:] for l in e["body"] if l.startswith("> — ")) + " " + " ".join(t for _, t in e["asked"])))
+                  + " ".join(l[4:] for l in e["body"] if l.startswith("> — ")) + " " + " ".join(t for _, t in e["asked"] + e["took"])))
     for stamp, text in log_lines(home):
         if (stamp, squeeze("「" + text)[:40]) in kept or (stamp, squeeze(text)[:40]) in kept: continue
         if any(d == stamp for e in ents for d, _ in e["reader"]): continue
@@ -489,6 +492,7 @@ def keep(home, rest):
     title, to, topic = opt(rest, "--title"), opt(rest, "--to"), opt(rest, "--file")
     froms, anchors, omits = multi(rest, "--from"), multi(rest, "--anchor") + multi(rest, "--against"), multi(rest, "--omit")
     reaches, drops, follows, asked = multi(rest, "--reach"), multi(rest, "--drop-anchor"), multi(rest, "--follows"), opt(rest, "--asked")
+    took = opt(rest, "--took")
     against = multi(rest, "--against"); AG = AGAINST
     rej, why = multi(rest, "--reject"), multi(rest, "--why")
     status = opt(rest, "--status"); para, pkind = opt(rest, "--paragraph"), opt(rest, "--paragraph-kind")
@@ -543,12 +547,13 @@ def keep(home, rest):
             blk = [l for l in blk if not AG.match(l)]
             me = max(i for i, l in enumerate(blk) if l.startswith("- **"))
             blk[me + 1:me + 1] = [f"- **{lab['ag']}**: " + ", ".join(dict.fromkeys(old + against))]
-        if follows or asked:
+        if follows or asked or took:
             old = [x.strip() for l in blk for m in [FOLLOWS.match(l)] if m for x in m[1].split(",") if x.strip()]
             blk = [l for l in blk if not FOLLOWS.match(l)]
             me = max(i for i, l in enumerate(blk) if l.startswith("- **"))
             blk[me + 1:me + 1] = ([f"- **{L['follows']}**: " + ", ".join(dict.fromkeys(old + follows))] if old or follows else []) \
-                + ([f"- **{L['asked']} ({stamp_now})**: 「{asked}」"] if asked else [])
+                + ([f"- **{L['asked']} ({stamp_now})**: 「{asked}」"] if asked else []) \
+                + ([f"- **{L['took']} ({stamp_now})**: 「{took}」"] if took else [])
         text = "\n".join(blk)
         for d in drops:
             text = re.sub(r"(?:^> .*\n)+?^> — [^\n]*" + re.escape(d) + r"\n?\n?", "", text, flags=re.M)
@@ -575,7 +580,7 @@ def keep(home, rest):
                 wt = next((l[2:].strip() for l in src.read_text(encoding="utf-8").split("\n") if l.startswith("# ")), name)
             desc = L["desc_topic"].format(name=name) if topic else L["desc_work"].format(title=wt)
             out = f'---\ntype: note\ndescription: "{desc}"\ntimestamp: X\nhuman_reviewed: true\ntags: [interpretation]\n---\n\n# {wt}\n'
-        parts = [f"## {no} · {title}", ""] + rl + ([sline] if sline else []) + ([f"- **{lab['re']}**: {', '.join(reaches)}"] if reaches else []) + rlines + ([f"- **{lab['ag']}**: " + ", ".join(against)] if against else []) + ([f"- **{L['follows']}**: " + ", ".join(follows)] if follows else []) + ([f"- **{L['asked']} ({stamp_now})**: 「{asked}」"] if asked else [])
+        parts = [f"## {no} · {title}", ""] + rl + ([sline] if sline else []) + ([f"- **{lab['re']}**: {', '.join(reaches)}"] if reaches else []) + rlines + ([f"- **{lab['ag']}**: " + ", ".join(against)] if against else []) + ([f"- **{L['follows']}**: " + ", ".join(follows)] if follows else []) + ([f"- **{L['asked']} ({stamp_now})**: 「{asked}」"] if asked else []) + ([f"- **{L['took']} ({stamp_now})**: 「{took}」"] if took else [])
         out += "\n" + "\n".join(parts) + ("\n\n" + "\n\n".join(quotes) if quotes else "") + ("\n\n" + ptext if ptext else "") + "\n"
     out = re.sub(r"(?m)^timestamp: .*$", "timestamp: " + parse_now(stamp_now).astimezone().isoformat(timespec="seconds"), out, count=1)
     tm = re.search(r"(?m)^tags: \[(.*)\]$", out)
@@ -660,7 +665,7 @@ def init(home, rest):
     (home / "interpretation").mkdir(exist_ok=True)
     loc = home / "interpretation" / "locale.json"
     if not loc.exists():
-        keys = ["reader", "status", "reaches", "rejected", "against", "follows", "asked", "tentative", "settled", "auto",
+        keys = ["reader", "status", "reaches", "rejected", "against", "follows", "asked", "took", "tentative", "settled", "auto",
                 "settled_signals", "tentative_signals", "memory_phrases", "chat_phrases", "naming_regex", "naming_drop",
                 "title_drop_leading", "tail_drop", "particles", "suffixes", "stopwords", "max_quotes"]
         loc.write_text(json.dumps({k: DEFAULT_LOCALE[k] for k in keys if k in DEFAULT_LOCALE}, ensure_ascii=False, indent=2) + "\n")
@@ -905,15 +910,9 @@ def land(home, raw):
         rest = squeeze(" ".join(t for _, t in said))
         for x in sorted(L["adopt_phrases"], key=len, reverse=True): rest = rest.replace(squeeze(x), "")
         only = len(rest) < int(L["min_chars"])          # nothing but the yes: it joins that reading; "yes, but…" also lands as its own
-        args = ["keep", str(home), "--to", str(sess[sid])] + (sum((["--from", st] for st, _ in said), []) if only else [])
-        pa = before.get("anchors", [])[:2]
-        if len(pa) == 2:                                 # an adopted paragraph rests on two quoted lines (the check's rule)
-            tmp = logd / ".adopt.txt"; tmp.write_text(f"{before['point']} ({pa[0]}, {pa[1]})", encoding="utf-8")
-            args += ["--paragraph", str(tmp), "--paragraph-kind", "adopted"] + sum((["--anchor", a] for a in pa), [])
-        if len(pa) == 2 or only:                         # under one line or none, a bare yes still joins the reading; "yes, but…" just lands
-            r = subprocess.run([sys.executable, "-I", __file__] + args, capture_output=True, text=True)
-            (logd / ".adopt.txt").unlink(missing_ok=True)
-            print((r.stdout + r.stderr).strip().splitlines()[0] if (r.stdout + r.stderr).strip() else "", file=sys.stderr)
+        args = ["keep", str(home), "--to", str(sess[sid]), "--took", before["point"]] + (sum((["--from", st] for st, _ in said), []) if only else [])
+        r = subprocess.run([sys.executable, "-I", __file__] + args, capture_output=True, text=True)   # a meta line, like Asked: no paragraph, no anchor rule
+        print((r.stdout + r.stderr).strip().splitlines()[0] if (r.stdout + r.stderr).strip() else "", file=sys.stderr)
         if only: return
     if not said or (not anchors and len(squeeze(" ".join(t for _, t in said))) < int(L["min_chars"])): return
     rec = json.loads((logd / ".recalled").read_text()) if (logd / ".recalled").exists() else {}
